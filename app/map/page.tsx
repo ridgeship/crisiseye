@@ -1,4 +1,6 @@
 import type { Metadata } from 'next'
+import { Navbar } from '@/components/navbar'
+import { FloatingActions } from '@/components/floating-actions'
 import { MapView } from '@/components/map/map-view'
 
 export const metadata: Metadata = {
@@ -8,5 +10,13 @@ export const metadata: Metadata = {
 }
 
 export default function MapPage() {
-  return <MapView />
+  return (
+    <>
+      <Navbar />
+      <main>
+        <MapView />
+      </main>
+      <FloatingActions />
+    </>
+  )
 }
