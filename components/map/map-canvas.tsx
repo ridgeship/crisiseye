@@ -46,7 +46,7 @@ export default function MapCanvas({ incidents, activeId, userPos, onSelect }: Ma
       zoomControl: true,
       attributionControl: true,
     })
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; OpenStreetMap &copy; CARTO',
       maxZoom: 19,
     }).addTo(map)

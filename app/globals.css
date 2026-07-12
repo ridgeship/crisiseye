@@ -185,9 +185,6 @@
   background: oklch(0.16 0.028 258);
   font-family: var(--font-sans);
 }
-.leaflet-tile {
-  filter: brightness(0.7) invert(1) contrast(0.9) hue-rotate(190deg) saturate(0.7) brightness(0.85);
-}
 .leaflet-control-attribution {
   background: oklch(0.2 0.03 258 / 0.75) !important;
   color: oklch(0.68 0.02 255) !important;
