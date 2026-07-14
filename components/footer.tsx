@@ -42,67 +42,45 @@ const SOCIALS = [
 export function Footer() {
   return (
     <footer className="border-t border-border/60 bg-card/40">
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
-        <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
+      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
+        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
           <div className="max-w-sm">
             <div className="flex items-center gap-3">
               <Image
                 src="/ghana-coat-of-arms.png"
-                alt=""
-                width={36}
-                height={36}
+                alt="Ghana Coat of Arms"
+                width={32}
+                height={32}
                 className="h-8 w-8 object-contain"
               />
               <span className="text-base font-semibold text-foreground">CrisisEye</span>
             </div>
-            <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              Ghana&apos;s intelligent emergency coordination platform — connecting citizens,
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+              Ghana's intelligent emergency coordination platform — connecting citizens,
               communities and response agencies for a safer nation.
             </p>
           </div>
 
-          <nav className="grid grid-cols-2 gap-x-10 gap-y-2 sm:grid-cols-1">
-            <span className="col-span-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground sm:col-span-1">
-              Platform
-            </span>
+          <nav className="flex flex-wrap gap-x-6 gap-y-2">
             {FOOTER_LINKS.map((link) => (
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
               >
                 {link.label}
               </Link>
             ))}
           </nav>
-
-          <div>
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Emergency Lines
-            </span>
-            <ul className="mt-2 space-y-1.5 text-sm text-muted-foreground">
-              <li>Police — <span className="font-mono text-foreground">191</span></li>
-              <li>Fire Service — <span className="font-mono text-foreground">192</span></li>
-              <li>Ambulance — <span className="font-mono text-foreground">193</span></li>
-              <li>NADMO — <span className="font-mono text-foreground">0302 772 717</span></li>
-            </ul>
-          </div>
         </div>
       </div>
 
       {/* Bottom bar */}
       <div className="border-t border-border/60">
-        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-4 sm:flex-row sm:px-6">
+        <div className="mx-auto flex max-w-7xl flex-col items-center justify-between gap-3 px-4 py-3 sm:flex-row sm:px-6">
           <div className="flex items-center gap-2.5">
-            <Image
-              src="/ghana-flag.webp"
-              alt="Flag of Ghana"
-              width={24}
-              height={16}
-              className="h-4 w-6 rounded-sm object-cover"
-            />
-            <p className="text-sm text-muted-foreground">
-              Proudly for Ghana. Built for a safer tomorrow.
+            <p className="text-xs text-muted-foreground">
+              © {new Date().getFullYear()} CrisisEye. Proudly for Ghana.
             </p>
           </div>
           <div className="flex items-center gap-3">
@@ -111,9 +89,9 @@ export function Footer() {
                 key={label}
                 href={href}
                 aria-label={label}
-                className="inline-flex size-8 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
+                className="inline-flex size-7 items-center justify-center rounded-full border border-border/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground"
               >
-                <Icon className="size-3.5" />
+                <Icon className="size-3" />
               </a>
             ))}
           </div>
@@ -122,3 +100,4 @@ export function Footer() {
     </footer>
   )
 }
+

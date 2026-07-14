@@ -1,118 +1,104 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
-import L from 'leaflet'
-import 'leaflet/dist/leaflet.css'
-import { CATEGORY_META, GHANA_CENTER, type Incident } from '@/lib/data'
+import { useEffect, useState, useRef } from 'react'
+import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
+import { CATEGORY_META, GHANA_CENTER, type IncidentCategory } from '@/lib/data'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Navigation } from 'lucide-react'
 
 interface MapCanvasProps {
-  incidents: Incident[]
+  incidents: any[]
   activeId: string | null
   userPos: [number, number] | null
   onSelect: (id: string) => void
 }
 
-function buildMarkerIcon(color: string, active: boolean) {
-  const size = active ? 34 : 26
-  return L.divIcon({
-    className: '',
-    html: `
-      <span style="
-        position:relative;display:flex;align-items:center;justify-content:center;
-        width:${size}px;height:${size}px;border-radius:9999px;
-        background:${color}33;border:2px solid ${color};
-        box-shadow:0 0 ${active ? 18 : 10}px ${color}aa;
-      ">
-        <span style="width:${active ? 12 : 9}px;height:${active ? 12 : 9}px;border-radius:9999px;background:${color};"></span>
-      </span>
-    `,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-  })
-}
+const CATEGORY_KEYS = Object.keys(CATEGORY_META) as IncidentCategory[]
 
 export default function MapCanvas({ incidents, activeId, userPos, onSelect }: MapCanvasProps) {
-  const containerRef = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<L.Map | null>(null)
-  const markersRef = useRef<Map<string, L.Marker>>(new Map())
-  const userMarkerRef = useRef<L.Marker | null>(null)
+  const [mapObj, setMapObj] = useState<google.maps.Map | null>(null)
+  
+  const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
 
-  // Initialize map once.
+  // Pan to active incident
   useEffect(() => {
-    if (mapRef.current || !containerRef.current) return
-    const map = L.map(containerRef.current, {
-      center: GHANA_CENTER,
-      zoom: 7,
-      zoomControl: true,
-      attributionControl: true,
-    })
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-      attribution: '&copy; OpenStreetMap &copy; CARTO',
-      maxZoom: 19,
-    }).addTo(map)
-    mapRef.current = map
-    return () => {
-      map.remove()
-      mapRef.current = null
+    if (!mapObj || !activeId) return
+    const incident = incidents.find((i) => i._id === activeId)
+    if (incident) {
+      mapObj.panTo({ lat: incident.location.lat, lng: incident.location.lng })
+      mapObj.setZoom(14)
     }
-  }, [])
+  }, [activeId, incidents, mapObj])
 
-  // Sync incident markers.
+  // Pan to user location
   useEffect(() => {
-    const map = mapRef.current
-    if (!map) return
-    const existing = markersRef.current
-    const seen = new Set<string>()
+    if (!mapObj || !userPos) return
+    mapObj.panTo({ lat: userPos[0], lng: userPos[1] })
+    mapObj.setZoom(15)
+  }, [userPos, mapObj])
 
-    incidents.forEach((incident) => {
-      seen.add(incident.id)
-      const color = CATEGORY_META[incident.category].color
-      const active = incident.id === activeId
-      let marker = existing.get(incident.id)
-      if (!marker) {
-        marker = L.marker([incident.lat, incident.lng], {
-          icon: buildMarkerIcon(color, active),
-        })
-        marker.on('click', () => onSelect(incident.id))
-        marker.bindTooltip(incident.title, { direction: 'top', offset: [0, -12] })
-        marker.addTo(map)
-        existing.set(incident.id, marker)
-      } else {
-        marker.setIcon(buildMarkerIcon(color, active))
-      }
-    })
+  return (
+    <div className="h-full w-full bg-background relative">
+      {!API_KEY && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/80 backdrop-blur">
+          <p className="text-muted-foreground font-mono">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is missing</p>
+        </div>
+      )}
+      <APIProvider apiKey={API_KEY}>
+        <Map
+          mapId="crisiseye_map_id"
+          defaultCenter={{ lat: GHANA_CENTER[0], lng: GHANA_CENTER[1] }}
+          defaultZoom={7}
+          gestureHandling={'greedy'}
+          disableDefaultUI={true}
+          onLoad={(map) => setMapObj(map.map)}
+        >
+          {incidents.map((incident) => {
+            const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
+            const meta = CATEGORY_META[catKey as IncidentCategory]
+            const color = meta.color
+            const active = incident._id === activeId
+            const Icon = meta.icon
 
-    // Remove filtered-out markers.
-    existing.forEach((marker, id) => {
-      if (!seen.has(id)) {
-        map.removeLayer(marker)
-        existing.delete(id)
-      }
-    })
-  }, [incidents, activeId, onSelect])
+            return (
+              <AdvancedMarker
+                key={incident._id}
+                position={{ lat: incident.location.lat, lng: incident.location.lng }}
+                onClick={() => onSelect(incident._id)}
+                zIndex={active ? 100 : 1}
+              >
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: active ? 1.2 : 1 }}
+                  whileHover={{ scale: 1.1 }}
+                  className="relative flex items-center justify-center cursor-pointer"
+                >
+                  {active && (
+                    <span className="absolute inset-0 rounded-full animate-ping opacity-50" style={{ backgroundColor: color }} />
+                  )}
+                  <div 
+                    className="flex items-center justify-center rounded-full shadow-lg border-2 border-background"
+                    style={{ backgroundColor: color, width: active ? 36 : 28, height: active ? 36 : 28 }}
+                  >
+                    <Icon className="text-white" size={active ? 20 : 14} />
+                  </div>
+                </motion.div>
+              </AdvancedMarker>
+            )
+          })}
 
-  // Pan to active incident.
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !activeId) return
-    const incident = incidents.find((i) => i.id === activeId)
-    if (incident) map.flyTo([incident.lat, incident.lng], 11, { duration: 0.8 })
-  }, [activeId, incidents])
-
-  // User location marker.
-  useEffect(() => {
-    const map = mapRef.current
-    if (!map || !userPos) return
-    if (userMarkerRef.current) map.removeLayer(userMarkerRef.current)
-    const icon = L.divIcon({
-      className: '',
-      html: `<span style="display:block;width:16px;height:16px;border-radius:9999px;background:#4a83ff;border:3px solid #fff;box-shadow:0 0 12px #4a83ff;"></span>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8],
-    })
-    userMarkerRef.current = L.marker(userPos, { icon }).addTo(map)
-    map.flyTo(userPos, 12, { duration: 0.8 })
-  }, [userPos])
-
-  return <div ref={containerRef} className="h-full w-full" />
+          {userPos && (
+            <AdvancedMarker position={{ lat: userPos[0], lng: userPos[1] }} zIndex={999}>
+              <div className="relative flex items-center justify-center">
+                <span className="absolute inset-0 rounded-full animate-ping bg-blue-500 opacity-50" />
+                <div className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-blue-600 shadow">
+                  <Navigation className="h-3 w-3 text-white" />
+                </div>
+              </div>
+            </AdvancedMarker>
+          )}
+        </Map>
+      </APIProvider>
+    </div>
+  )
 }

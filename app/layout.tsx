@@ -27,6 +27,8 @@ export const viewport: Viewport = {
   themeColor: '#0d1424',
 }
 
+import ConvexClientProvider from "@/components/ConvexClientProvider";
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -35,9 +37,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable}`}>
       <body className="bg-background font-sans antialiased">
-        <Suspense fallback={null}>
-          <SiteChrome>{children}</SiteChrome>
-        </Suspense>
+        <ConvexClientProvider>
+          <Suspense fallback={null}>
+            <SiteChrome>{children}</SiteChrome>
+          </Suspense>
+        </ConvexClientProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

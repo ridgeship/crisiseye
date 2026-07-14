@@ -14,10 +14,12 @@ import {
 import { cn } from '@/lib/utils'
 import {
   CATEGORY_META,
-  INCIDENTS,
   SEVERITY_META,
   type IncidentCategory,
 } from '@/lib/data'
+import { useQuery } from 'convex/react'
+// @ts-ignore
+import { api } from '@/convex/_generated/api'
 
 const MapCanvas = dynamic(() => import('@/components/map/map-canvas'), {
   ssr: false,
@@ -30,9 +32,10 @@ const MapCanvas = dynamic(() => import('@/components/map/map-canvas'), {
 
 const CATEGORY_KEYS = Object.keys(CATEGORY_META) as IncidentCategory[]
 
-function timeAgo(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime()
+function timeAgo(num: number) {
+  const diff = Date.now() - num
   const mins = Math.round(diff / 60000)
+  if (mins < 1) return `Just now`
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.round(mins / 60)
   return `${hrs}h ago`
@@ -46,18 +49,22 @@ export function MapView() {
   const [fullscreen, setFullscreen] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
+  // @ts-ignore
+  const liveIncidents = useQuery(api.incidents.getIncidents) || []
+
   const filtered = useMemo(() => {
-    return INCIDENTS.filter((i) => {
-      const catOk = activeCats.size === 0 || activeCats.has(i.category)
+    return liveIncidents.filter((i: any) => {
+      // Find category key from label
+      const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === i.type) || 'other'
+      const catOk = activeCats.size === 0 || activeCats.has(catKey as IncidentCategory)
       const q = query.trim().toLowerCase()
       const queryOk =
         !q ||
-        i.title.toLowerCase().includes(q) ||
-        i.location.toLowerCase().includes(q) ||
-        i.region.toLowerCase().includes(q)
+        i.type.toLowerCase().includes(q) ||
+        (i.location?.address || '').toLowerCase().includes(q)
       return catOk && queryOk
     })
-  }, [activeCats, query])
+  }, [activeCats, query, liveIncidents])
 
   const toggleCat = (cat: IncidentCategory) => {
     setActiveCats((prev) => {
@@ -136,17 +143,19 @@ export function MapView() {
           {/* Incident list */}
           <div className="flex-1 overflow-y-auto p-3">
             <ul className="space-y-2">
-              {filtered.map((incident) => {
-                const meta = CATEGORY_META[incident.category]
+              {filtered.map((incident: any) => {
+                const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
+                const meta = CATEGORY_META[catKey as IncidentCategory]
                 const Icon = meta.icon
-                const sev = SEVERITY_META[incident.severity]
+                const sevKey = (Object.keys(SEVERITY_META) as any[]).find(k => SEVERITY_META[k].label === incident.severity) || 'moderate'
+                const sev = SEVERITY_META[sevKey as keyof typeof SEVERITY_META]
                 return (
-                  <li key={incident.id}>
+                  <li key={incident._id}>
                     <button
-                      onClick={() => setActiveId(incident.id)}
+                      onClick={() => setActiveId(incident._id)}
                       className={cn(
                         'w-full rounded-xl border p-3 text-left transition-colors',
-                        activeId === incident.id
+                        activeId === incident._id
                           ? 'border-primary bg-primary/10'
                           : 'border-border/60 bg-background/40 hover:border-border',
                       )}
@@ -161,14 +170,14 @@ export function MapView() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate text-sm font-semibold text-foreground">
-                              {incident.title}
+                              {incident.type}
                             </p>
                             <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                              {timeAgo(incident.reportedAt)}
+                              {timeAgo(incident._creationTime)}
                             </span>
                           </div>
                           <p className="truncate text-xs text-muted-foreground">
-                            {incident.location}
+                            {incident.location.address}
                           </p>
                           <span
                             className={cn(
@@ -296,6 +305,7 @@ export function MapView() {
           {activeId && (
             <SelectedCard
               id={activeId}
+              incidents={filtered}
               onClose={() => setActiveId(null)}
             />
           )}
@@ -305,15 +315,17 @@ export function MapView() {
   )
 }
 
-function SelectedCard({ id, onClose }: { id: string; onClose: () => void }) {
-  const incident = INCIDENTS.find((i) => i.id === id)
+function SelectedCard({ id, incidents, onClose }: { id: string; incidents: any[]; onClose: () => void }) {
+  const incident = incidents.find((i) => i._id === id)
   if (!incident) return null
-  const meta = CATEGORY_META[incident.category]
+  const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
+  const meta = CATEGORY_META[catKey as IncidentCategory]
   const Icon = meta.icon
-  const sev = SEVERITY_META[incident.severity]
+  const sevKey = (Object.keys(SEVERITY_META) as any[]).find(k => SEVERITY_META[k].label === incident.severity) || 'moderate'
+  const sev = SEVERITY_META[sevKey as keyof typeof SEVERITY_META]
 
   return (
-    <div className="absolute bottom-3 right-3 z-[550] w-[calc(100%-1.5rem)] max-w-sm rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur sm:w-80">
+    <div className="absolute bottom-3 right-3 z-[550] w-[calc(100%-1.5rem)] max-w-sm rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur sm:w-80 shadow-2xl">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span
@@ -323,8 +335,8 @@ function SelectedCard({ id, onClose }: { id: string; onClose: () => void }) {
             <Icon className="size-4" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-foreground">{incident.title}</p>
-            <p className="font-mono text-xs text-muted-foreground">{incident.id}</p>
+            <p className="text-sm font-semibold text-foreground">{incident.type}</p>
+            <p className="font-mono text-xs text-muted-foreground">{incident._id}</p>
           </div>
         </div>
         <button onClick={onClose} aria-label="Close">
@@ -334,11 +346,11 @@ function SelectedCard({ id, onClose }: { id: string; onClose: () => void }) {
       <dl className="mt-3 space-y-1.5 text-sm">
         <div className="flex justify-between">
           <dt className="text-muted-foreground">Location</dt>
-          <dd className="text-foreground">{incident.location}</dd>
+          <dd className="text-foreground max-w-[60%] truncate text-right">{incident.location.address}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Region</dt>
-          <dd className="text-foreground">{incident.region}</dd>
+          <dt className="text-muted-foreground">Description</dt>
+          <dd className="text-foreground max-w-[60%] truncate text-right">{incident.description}</dd>
         </div>
         <div className="flex justify-between">
           <dt className="text-muted-foreground">Severity</dt>
@@ -349,16 +361,15 @@ function SelectedCard({ id, onClose }: { id: string; onClose: () => void }) {
           </dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Confidence</dt>
-          <dd className="font-mono text-foreground">{incident.confidence}%</dd>
+          <dt className="text-muted-foreground">Status</dt>
+          <dd className="font-mono text-green-500 font-semibold">Active</dd>
         </div>
       </dl>
       <button
-        className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border/60 bg-secondary/50 py-2 text-sm font-medium text-foreground transition-colors hover:border-primary/50"
-        disabled
+        className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/50 bg-primary/10 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
       >
         <Navigation className="size-4" />
-        Directions (coming soon)
+        Dispatch Response Team
       </button>
     </div>
   )

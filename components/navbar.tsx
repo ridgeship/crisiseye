@@ -7,6 +7,10 @@ import { useState } from 'react'
 import { Menu, X, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import { useConvexAuth, useQuery } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+// @ts-ignore
+import { api } from "@/convex/_generated/api";
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
@@ -20,6 +24,10 @@ const NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const { isAuthenticated } = useConvexAuth()
+  const { signOut } = useAuthActions()
+  // @ts-ignore
+  const user = useQuery(api.users.current)
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)
@@ -73,14 +81,31 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
-          <Button
-            render={<Link href="/login" />}
-            variant="outline"
-            className="hidden h-9 gap-1.5 rounded-full border-border/70 bg-transparent px-4 sm:inline-flex"
-          >
-            <UserRound className="size-4" />
-            Login / Sign Up
-          </Button>
+          {isAuthenticated ? (
+            <div className="hidden items-center gap-3 sm:flex">
+              <span className="text-sm font-medium text-foreground">
+                {user ? user.name || user.email : "Loading..."}
+              </span>
+              <Button
+                onClick={() => signOut()}
+                variant="outline"
+                className="h-9 rounded-full border-border/70 bg-transparent px-4 text-xs"
+              >
+                Sign Out
+              </Button>
+            </div>
+          ) : (
+            <Button
+              asChild
+              variant="outline"
+              className="hidden h-9 gap-1.5 rounded-full border-border/70 bg-transparent px-4 sm:inline-flex"
+            >
+              <Link href="/login">
+                <UserRound className="size-4" />
+                Login / Sign Up
+              </Link>
+            </Button>
+          )}
           <button
             type="button"
             onClick={() => setOpen((v) => !v)}

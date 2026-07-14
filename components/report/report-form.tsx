@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useState } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import Link from 'next/link'
 import {
   MapPin,
@@ -10,10 +10,17 @@ import {
   CheckCircle2,
   Loader2,
   ChevronRight,
+  Mic,
+  Square,
+  Play,
+  Pause
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { CATEGORY_META, SEVERITY_META, type IncidentCategory, type Severity } from '@/lib/data'
+import { useMutation } from "convex/react"
+// @ts-ignore
+import { api } from "@/convex/_generated/api"
 
 const CATEGORIES = Object.entries(CATEGORY_META) as [
   IncidentCategory,
@@ -33,12 +40,95 @@ type LocationState = {
   status: 'idle' | 'locating' | 'ready' | 'error'
 }
 
+function VoiceRecorder({ onRecord }: { onRecord: (blob: Blob | null) => void }) {
+  const [isRecording, setIsRecording] = useState(false);
+  const [audioURL, setAudioURL] = useState<string | null>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const url = URL.createObjectURL(audioBlob);
+        setAudioURL(url);
+        onRecord(audioBlob);
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert("Could not access microphone.");
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current) {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.stream.getTracks().forEach(t => t.stop());
+    }
+    setIsRecording(false);
+  };
+
+  const clearRecording = () => {
+    setAudioURL(null);
+    onRecord(null);
+  };
+
+  return (
+    <div className="mt-2 rounded-xl border border-border/60 bg-card/40 p-4">
+      {audioURL ? (
+        <div className="flex items-center justify-between">
+          <audio src={audioURL} controls className="h-8 max-w-[200px]" />
+          <button onClick={clearRecording} type="button" className="text-muted-foreground hover:text-foreground">
+            <X className="size-5" />
+          </button>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          {isRecording ? (
+            <button
+              type="button"
+              onClick={stopRecording}
+              className="flex items-center gap-2 rounded-lg bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground animate-pulse"
+            >
+              <Square className="size-4" /> Stop Recording
+            </button>
+          ) : (
+            <button
+              type="button"
+              onPointerDown={startRecording}
+              className="flex items-center gap-2 rounded-lg border border-primary/50 bg-primary/10 px-4 py-2 text-sm font-medium text-primary hover:bg-primary/20 transition-colors"
+            >
+              <Mic className="size-4" /> Record Voice
+            </button>
+          )}
+          <span className="text-sm text-muted-foreground">
+            {isRecording ? "Recording... tap stop when done" : "Tap or hold to record an audio description"}
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ReportForm() {
   const [category, setCategory] = useState<IncidentCategory | null>(null)
   const [severity, setSeverity] = useState<Severity>('moderate')
   const [description, setDescription] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [files, setFiles] = useState<File[]>([])
+  const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
   const [location, setLocation] = useState<LocationState>({
@@ -47,6 +137,9 @@ export function ReportForm() {
     status: 'idle',
   })
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // @ts-ignore
+  const reportIncident = useMutation(api.incidents.reportIncident);
 
   const useCurrentLocation = () => {
     setLocation((l) => ({ ...l, mode: 'auto', status: 'locating' }))
@@ -80,16 +173,36 @@ export function ReportForm() {
     (location.mode === 'manual' ? location.address.trim().length > 2 : location.status === 'ready') &&
     confirmed
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!canSubmit) return
     setSubmitting(true)
-    // Simulated dispatch to backend. Real API wiring lands with auth + DB.
-    setTimeout(() => {
-      setSubmitting(false)
+    
+    try {
+      // In a real scenario, files and voiceBlob would be uploaded to Convex Storage first
+      // For this demo, we'll assume they are handled or just pass empty for media URLs if not fully implemented.
+      await reportIncident({
+        type: CATEGORY_META[category!].label,
+        description: description,
+        severity: SEVERITY_META[severity].label,
+        location: {
+          lat: location.lat || 0,
+          lng: location.lng || 0,
+          address: location.address
+        },
+        // mock URLs for demonstration
+        mediaUrls: files.map(f => f.name),
+        voiceReportUrl: voiceBlob ? "voice-report-audio" : undefined
+      });
+      
       setSubmitted(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
-    }, 1200)
+    } catch (err) {
+      console.error(err);
+      alert("Failed to submit report. Please try again.");
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   if (submitted) {
@@ -134,6 +247,7 @@ export function ReportForm() {
               setDescription('')
               setConfirmed(false)
               setFiles([])
+              setVoiceBlob(null)
               setLocation({ mode: 'auto', address: '', status: 'idle' })
             }}
           >
@@ -253,7 +367,7 @@ export function ReportForm() {
           rows={4}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Describe what is happening, who is affected, and any immediate dangers."
+          placeholder="Describe exactly what is happening. Include the number of people involved, hazards, nearby landmarks and any important observations."
           className="mt-2 w-full resize-none rounded-xl border border-border/60 bg-card/40 px-4 py-3 text-sm leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-primary"
         />
       </fieldset>
@@ -261,6 +375,11 @@ export function ReportForm() {
       {/* Evidence */}
       <fieldset>
         <span className="text-sm font-semibold text-foreground">Evidence (optional)</span>
+        
+        {/* Voice Record */}
+        <VoiceRecorder onRecord={(blob) => setVoiceBlob(blob)} />
+
+        {/* File Upload */}
         <input
           ref={fileInputRef}
           type="file"
@@ -272,7 +391,7 @@ export function ReportForm() {
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className="mt-2 flex w-full items-center justify-center gap-2.5 rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+          className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
         >
           <Upload className="size-4" />
           Upload photos or video
