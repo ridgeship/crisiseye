@@ -38,7 +38,7 @@ export function Navbar() {
         {/* Brand */}
         <Link href="/" className="flex items-center gap-3">
           <Image
-            src="/ghana-coat-of-arms.png"
+            src="/ghana-coat-of-arms-new.png"
             alt="Government of Ghana coat of arms"
             width={40}
             height={40}

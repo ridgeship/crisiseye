@@ -8,7 +8,7 @@ export function Hero() {
       {/* Network map background */}
       <div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/ghana-network-map.jpg)' }}
+        style={{ backgroundImage: 'url(/earth-at-night.png)' }}
         aria-hidden="true"
       />
       {/* Blending overlays */}

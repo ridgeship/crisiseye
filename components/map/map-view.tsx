@@ -93,8 +93,10 @@ export function MapView() {
   return (
     <div
       className={cn(
-        'relative',
-        fullscreen ? 'fixed inset-0 z-[60] bg-background' : 'h-[calc(100vh-5rem)]',
+        'relative transition-all duration-300',
+        fullscreen 
+          ? 'fixed inset-0 z-[200] bg-background' 
+          : 'h-[calc(100vh-7.5rem)] rounded-2xl overflow-hidden border border-border/60 shadow-lg mx-auto max-w-7xl',
       )}
     >
       <div className="flex h-full">

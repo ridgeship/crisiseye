@@ -13,7 +13,7 @@ export default function MapPage() {
   return (
     <>
       <Navbar />
-      <main>
+      <main className="pt-24 px-4 pb-4">
         <MapView />
       </main>
       <FloatingActions />

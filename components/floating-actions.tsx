@@ -60,7 +60,9 @@ export function FloatingActions() {
       const loc = await captureLocation()
       setLocation(loc)
     } catch (e) {
-      console.error(e)
+      // Gracefully handle geolocation errors without throwing alarming console errors.
+      // This happens if the user denies location permission or if it's unavailable.
+      console.warn("Geolocation unavailable or denied. SOS will proceed without precise location.")
     }
 
     progressInterval.current = setInterval(() => {
@@ -133,7 +135,15 @@ export function FloatingActions() {
               />
             </svg>
           )}
-          <AlertCircle className="size-8 text-white" />
+          <svg viewBox="0 0 100 100" className="size-10 text-white" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
+            <text x="50" y="55" fontSize="30" fontWeight="bold" textAnchor="middle" fill="currentColor" stroke="none">SOS</text>
+            <path d="M 38 28 Q 50 18 62 28" />
+            <path d="M 43 18 Q 50 12 57 18" />
+            <path d="M 47 10 Q 50 8 53 10" />
+            <path d="M 38 72 Q 50 82 62 72" />
+            <path d="M 43 82 Q 50 88 57 82" />
+            <path d="M 47 90 Q 50 92 53 90" />
+          </svg>
         </button>
       </div>
 

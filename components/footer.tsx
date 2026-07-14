@@ -42,12 +42,12 @@ const SOCIALS = [
 export function Footer() {
   return (
     <footer className="border-t border-border/60 bg-card/40">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        <div className="flex flex-col gap-6 md:flex-row md:items-start md:justify-between">
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
           <div className="max-w-sm">
             <div className="flex items-center gap-3">
               <Image
-                src="/ghana-coat-of-arms.png"
+                src="/ghana-coat-of-arms-new.png"
                 alt="Ghana Coat of Arms"
                 width={32}
                 height={32}
@@ -66,7 +66,7 @@ export function Footer() {
               <Link
                 key={link.href}
                 href={link.href}
-                className="text-xs text-muted-foreground transition-colors hover:text-foreground"
+                className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
                 {link.label}
               </Link>
