@@ -95,7 +95,7 @@ export function MapView() {
       className={cn(
         'relative transition-all duration-300',
         fullscreen 
-          ? 'fixed inset-0 z-[200] bg-background' 
+          ? 'fixed inset-0 z-200 bg-background' 
           : 'h-[calc(100vh-7.5rem)] rounded-2xl overflow-hidden border border-border/60 shadow-lg mx-auto max-w-7xl',
       )}
     >
@@ -221,7 +221,7 @@ export function MapView() {
           />
 
           {/* Mobile search overlay */}
-          <div className="absolute inset-x-3 top-3 z-[500] lg:hidden">
+          <div className="absolute inset-x-3 top-3 z-500 lg:hidden">
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <input
@@ -234,7 +234,7 @@ export function MapView() {
           </div>
 
           {/* Map controls */}
-          <div className="absolute right-3 top-3 z-[500] flex flex-col gap-2">
+          <div className="absolute right-3 top-3 z-500 flex flex-col gap-2">
             <button
               onClick={locateMe}
               aria-label="Find my location"
@@ -259,7 +259,7 @@ export function MapView() {
           </div>
 
           {/* Legend */}
-          <div className="absolute bottom-3 left-3 z-[500] hidden rounded-xl border border-border/60 bg-card/90 p-3 backdrop-blur sm:block">
+          <div className="absolute bottom-3 left-3 z-500 hidden rounded-xl border border-border/60 bg-card/90 p-3 backdrop-blur sm:block">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Legend
             </span>
@@ -280,7 +280,7 @@ export function MapView() {
 
           {/* Mobile filter sheet */}
           {showFilters && (
-            <div className="absolute inset-x-3 bottom-3 z-[550] rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur lg:hidden">
+            <div className="absolute inset-x-3 bottom-3 z-550 rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur lg:hidden">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-semibold text-foreground">Filter categories</span>
                 <button onClick={() => setShowFilters(false)} aria-label="Close filters">
@@ -333,7 +333,7 @@ function SelectedCard({ id, incidents, onClose }: { id: string; incidents: any[]
   const sev = SEVERITY_META[severityFromLabel(incident.severity)]
 
   return (
-    <div className="absolute bottom-3 right-3 z-[550] w-[calc(100%-1.5rem)] max-w-sm rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur sm:w-80 shadow-2xl">
+    <div className="absolute bottom-3 right-3 z-550 w-[calc(100%-1.5rem)] max-w-sm rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur sm:w-80 shadow-2xl">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span

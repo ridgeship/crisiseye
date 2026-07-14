@@ -104,7 +104,7 @@ export function FloatingActions() {
 
   return (
     <>
-      <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-3">
+      <div className="fixed bottom-6 right-6 z-210 flex flex-col gap-3">
         <button
           onPointerDown={startPress}
           onPointerUp={endPress}
@@ -155,7 +155,7 @@ export function FloatingActions() {
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-x-0 bottom-0 z-[100] rounded-t-3xl border-t border-border bg-card p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl sm:mx-auto sm:max-w-md sm:rounded-3xl sm:border sm:bottom-6"
+            className="fixed inset-x-0 bottom-0 z-230 rounded-t-3xl border-t border-border bg-card p-6 shadow-[0_-10px_40px_rgba(0,0,0,0.3)] backdrop-blur-xl sm:mx-auto sm:max-w-md sm:rounded-3xl sm:border sm:bottom-6"
           >
             <div className="text-center">
               <h3 className="text-xl font-bold text-destructive">What is happening?</h3>
@@ -208,7 +208,7 @@ export function FloatingActions() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[90] bg-background/80 backdrop-blur-sm"
+            className="fixed inset-0 z-220 bg-background/80 backdrop-blur-sm"
           />
         )}
       </AnimatePresence>
