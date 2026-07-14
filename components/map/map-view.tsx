@@ -16,6 +16,7 @@ import {
   CATEGORY_META,
   SEVERITY_META,
   type IncidentCategory,
+  type Severity,
 } from '@/lib/data'
 import { useQuery } from 'convex/react'
 // @ts-ignore
@@ -31,6 +32,7 @@ const MapCanvas = dynamic(() => import('@/components/map/map-canvas'), {
 })
 
 const CATEGORY_KEYS = Object.keys(CATEGORY_META) as IncidentCategory[]
+const SEVERITY_KEYS = Object.keys(SEVERITY_META) as Severity[]
 
 function timeAgo(num: number) {
   const diff = Date.now() - num
@@ -39,6 +41,12 @@ function timeAgo(num: number) {
   if (mins < 60) return `${mins}m ago`
   const hrs = Math.round(mins / 60)
   return `${hrs}h ago`
+}
+
+function severityFromLabel(label: unknown): Severity {
+  if (typeof label !== 'string') return 'moderate'
+
+  return SEVERITY_KEYS.find((key) => SEVERITY_META[key].label === label) ?? 'moderate'
 }
 
 export function MapView() {
@@ -147,8 +155,7 @@ export function MapView() {
                 const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
                 const meta = CATEGORY_META[catKey as IncidentCategory]
                 const Icon = meta.icon
-                const sevKey = (Object.keys(SEVERITY_META) as any[]).find(k => SEVERITY_META[k].label === incident.severity) || 'moderate'
-                const sev = SEVERITY_META[sevKey as keyof typeof SEVERITY_META]
+                const sev = SEVERITY_META[severityFromLabel(incident.severity)]
                 return (
                   <li key={incident._id}>
                     <button
@@ -321,8 +328,7 @@ function SelectedCard({ id, incidents, onClose }: { id: string; incidents: any[]
   const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
   const meta = CATEGORY_META[catKey as IncidentCategory]
   const Icon = meta.icon
-  const sevKey = (Object.keys(SEVERITY_META) as any[]).find(k => SEVERITY_META[k].label === incident.severity) || 'moderate'
-  const sev = SEVERITY_META[sevKey as keyof typeof SEVERITY_META]
+  const sev = SEVERITY_META[severityFromLabel(incident.severity)]
 
   return (
     <div className="absolute bottom-3 right-3 z-[550] w-[calc(100%-1.5rem)] max-w-sm rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur sm:w-80 shadow-2xl">

@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 import { Menu, X, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 // @ts-ignore
@@ -95,16 +95,16 @@ export function Navbar() {
               </Button>
             </div>
           ) : (
-            <Button
-              asChild
-              variant="outline"
-              className="hidden h-9 gap-1.5 rounded-full border-border/70 bg-transparent px-4 sm:inline-flex"
+            <Link
+              href="/login"
+              className={cn(
+                buttonVariants({ variant: 'outline' }),
+                'hidden h-9 gap-1.5 rounded-full border-border/70 bg-transparent px-4 sm:inline-flex',
+              )}
             >
-              <Link href="/login">
-                <UserRound className="size-4" />
-                Login / Sign Up
-              </Link>
-            </Button>
+              <UserRound className="size-4" />
+              Login / Sign Up
+            </Link>
           )}
           <button
             type="button"

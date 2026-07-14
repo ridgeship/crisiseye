@@ -1,7 +1,7 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
-import { APIProvider, Map, AdvancedMarker, Pin } from '@vis.gl/react-google-maps'
+import { useEffect } from 'react'
+import { APIProvider, Map, AdvancedMarker, useMap } from '@vis.gl/react-google-maps'
 import { CATEGORY_META, GHANA_CENTER, type IncidentCategory } from '@/lib/data'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Navigation } from 'lucide-react'
@@ -16,26 +16,7 @@ interface MapCanvasProps {
 const CATEGORY_KEYS = Object.keys(CATEGORY_META) as IncidentCategory[]
 
 export default function MapCanvas({ incidents, activeId, userPos, onSelect }: MapCanvasProps) {
-  const [mapObj, setMapObj] = useState<google.maps.Map | null>(null)
-  
   const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
-
-  // Pan to active incident
-  useEffect(() => {
-    if (!mapObj || !activeId) return
-    const incident = incidents.find((i) => i._id === activeId)
-    if (incident) {
-      mapObj.panTo({ lat: incident.location.lat, lng: incident.location.lng })
-      mapObj.setZoom(14)
-    }
-  }, [activeId, incidents, mapObj])
-
-  // Pan to user location
-  useEffect(() => {
-    if (!mapObj || !userPos) return
-    mapObj.panTo({ lat: userPos[0], lng: userPos[1] })
-    mapObj.setZoom(15)
-  }, [userPos, mapObj])
 
   return (
     <div className="h-full w-full bg-background relative">
@@ -51,8 +32,8 @@ export default function MapCanvas({ incidents, activeId, userPos, onSelect }: Ma
           defaultZoom={7}
           gestureHandling={'greedy'}
           disableDefaultUI={true}
-          onLoad={(map) => setMapObj(map.map)}
         >
+          <MapViewportController incidents={incidents} activeId={activeId} userPos={userPos} />
           {incidents.map((incident) => {
             const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
             const meta = CATEGORY_META[catKey as IncidentCategory]
@@ -101,4 +82,30 @@ export default function MapCanvas({ incidents, activeId, userPos, onSelect }: Ma
       </APIProvider>
     </div>
   )
+}
+
+function MapViewportController({
+  incidents,
+  activeId,
+  userPos,
+}: Pick<MapCanvasProps, 'incidents' | 'activeId' | 'userPos'>) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (!map || !activeId) return
+    const incident = incidents.find((i) => i._id === activeId)
+    if (!incident) return
+
+    map.panTo({ lat: incident.location.lat, lng: incident.location.lng })
+    map.setZoom(14)
+  }, [activeId, incidents, map])
+
+  useEffect(() => {
+    if (!map || !userPos) return
+
+    map.panTo({ lat: userPos[0], lng: userPos[1] })
+    map.setZoom(15)
+  }, [userPos, map])
+
+  return null
 }

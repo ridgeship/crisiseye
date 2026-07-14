@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { CloudRain, Wind, Thermometer, Droplets, AlertTriangle, ShieldCheck, MapPin, Map, Navigation } from "lucide-react";
+import { CloudRain, Wind, Thermometer, Droplets, AlertTriangle, ShieldCheck, MapPin, Map, Navigation, Waves, Flame } from "lucide-react";
 import { motion } from "framer-motion";
 
 type WeatherData = {
@@ -147,8 +147,7 @@ export default function CommunityRiskPage() {
               { type: "Fire Risk", level: fireRisk, icon: Flame },
               { type: "Storm Risk", level: stormRisk, icon: Wind },
             ].map((risk, i) => {
-               // mock lucide icons for Waves and Flame to standard ones we already imported
-               const Icon = risk.icon === Waves ? CloudRain : risk.icon === Flame ? Thermometer : Wind;
+               const Icon = risk.icon;
                return (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
