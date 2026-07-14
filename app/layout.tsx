@@ -35,8 +35,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable}`}>
-      <body className="bg-background font-sans antialiased">
+    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+      <body className="bg-background font-sans antialiased" suppressHydrationWarning>
         <ConvexClientProvider>
           <Suspense fallback={null}>
             <SiteChrome>{children}</SiteChrome>
