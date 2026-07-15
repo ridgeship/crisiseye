@@ -23,7 +23,7 @@ export function RoleSwitcher() {
   // Only render in development
   if (process.env.NODE_ENV !== "development") return null
   
-  if (user === undefined) return null
+  if (user === undefined || user === null) return null
 
   return (
     <div className="fixed bottom-4 left-4 z-[9999]">
