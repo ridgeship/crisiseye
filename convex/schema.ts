@@ -5,14 +5,13 @@ export default defineSchema({
   users: defineTable({
     name: v.string(),
     email: v.string(),
-    // Add other fields as needed for @convex-dev/auth if customized,
-    // though auth typically manages its own tables if using the standard convex auth.
+    role: v.optional(v.string()), // 'citizen', 'police', 'fire', 'ambulance', 'nadmo', 'ecg', 'admin'
   }).index("by_email", ["email"]),
   
   incidents: defineTable({
     type: v.string(), // Fire, Flood, etc.
     description: v.optional(v.string()),
-    severity: v.string(), // Low, Moderate, High, Critical
+    severity: v.string(), // low, moderate, high, critical
     location: v.object({
       lat: v.number(),
       lng: v.number(),
@@ -20,8 +19,31 @@ export default defineSchema({
     }),
     mediaUrls: v.optional(v.array(v.string())), // Images or Video URLs (or storage IDs)
     voiceReportUrl: v.optional(v.string()), // Voice note URL
-    status: v.string(), // Active, Resolved, etc.
+    status: v.string(), // Active, Responding, Resolved, etc.
     timestamp: v.number(),
     userId: v.optional(v.id("users")),
-  }).index("by_status", ["status"]).index("by_type", ["type"]),
+
+    // RESPONDER DASHBOARD FIELDS
+    assignedAgency: v.optional(v.string()), // 'police', 'fire', 'ambulance', 'nadmo', 'ecg'
+    assignedUnit: v.optional(v.string()),
+    verificationStatus: v.optional(v.string()), // 'pending', 'verified', 'needs-verification', 'dispatcher-review'
+    confidenceScore: v.optional(v.number()), // 0 - 100
+    evidenceSummary: v.optional(v.string()),
+    escalationLevel: v.optional(v.number()), // 0, 1, 2, 3
+    acknowledgementStatus: v.optional(v.string()), // 'pending', 'acknowledged', 'escalated'
+    
+    // Emergency Timeline (Array of events)
+    timeline: v.optional(
+      v.array(
+        v.object({
+          time: v.number(),
+          status: v.string(),
+          note: v.string(),
+        })
+      )
+    ),
+  })
+    .index("by_status", ["status"])
+    .index("by_type", ["type"])
+    .index("by_agency", ["assignedAgency"]),
 });

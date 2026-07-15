@@ -28,6 +28,7 @@ export const viewport: Viewport = {
 }
 
 import ConvexClientProvider from "@/components/ConvexClientProvider";
+import { RoleSwitcher } from "@/components/dev/role-switcher";
 
 export default function RootLayout({
   children,
@@ -41,6 +42,7 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <SiteChrome>{children}</SiteChrome>
           </Suspense>
+          <RoleSwitcher />
         </ConvexClientProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

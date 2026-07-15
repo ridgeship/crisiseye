@@ -18,11 +18,11 @@ export function Hero() {
       />
       {/* Blending overlays */}
       <div
-        className="absolute inset-0 bg-gradient-to-r from-background via-background/85 to-background/30"
+        className="absolute inset-0 bg-linear-to-r from-background via-background/85 to-background/30"
         aria-hidden="true"
       />
       <div
-        className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-background/70"
+        className="absolute inset-0 bg-linear-to-t from-background via-transparent to-background/70"
         aria-hidden="true"
       />
 
