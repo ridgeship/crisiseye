@@ -15,6 +15,15 @@ const nextConfig = {
     unoptimized: true,
     qualities: [100, 75],
   },
+  async redirects() {
+    return [
+      {
+        source: '/responderdashboard',
+        destination: '/responder',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

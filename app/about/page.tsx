@@ -30,7 +30,7 @@ export default function AboutPage() {
         {/* Header Section */}
         <motion.div variants={fadeUp} className="text-center">
           <Image
-            src="/ghana-coat-of-arms.png"
+            src="/ghana-coat-of-arms-new.png"
             alt="Government of Ghana coat of arms"
             width={96}
             height={96}

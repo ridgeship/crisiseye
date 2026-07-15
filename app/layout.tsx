@@ -28,6 +28,7 @@ export const viewport: Viewport = {
 }
 
 import ConvexClientProvider from "@/components/ConvexClientProvider";
+import { ThemeProvider } from "@/components/theme-provider";
 import { RoleSwitcher } from "@/components/dev/role-switcher";
 
 export default function RootLayout({
@@ -36,14 +37,21 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className={`dark ${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="bg-background font-sans antialiased" suppressHydrationWarning>
-        <ConvexClientProvider>
-          <Suspense fallback={null}>
-            <SiteChrome>{children}</SiteChrome>
-          </Suspense>
-          <RoleSwitcher />
-        </ConvexClientProvider>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <ConvexClientProvider>
+            <Suspense fallback={null}>
+              <SiteChrome>{children}</SiteChrome>
+            </Suspense>
+            <RoleSwitcher />
+          </ConvexClientProvider>
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

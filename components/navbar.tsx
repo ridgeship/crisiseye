@@ -11,6 +11,7 @@ import { useConvexAuth, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 // @ts-ignore
 import { api } from "@/convex/_generated/api";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const NAV_LINKS = [
   { href: '/', label: 'Home' },
@@ -33,7 +34,7 @@ export function Navbar() {
     href === '/' ? pathname === '/' : pathname.startsWith(href)
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 px-3 pt-3 sm:px-5 sm:pt-4">
+    <header className="fixed inset-x-0 top-0 z-[9999] px-3 pt-3 sm:px-5 sm:pt-4">
       <nav className="mx-auto flex max-w-7xl items-center justify-between gap-4 rounded-xl border border-border/70 bg-card/70 px-4 py-2.5 backdrop-blur-xl sm:px-5">
         {/* Brand */}
         <Link href="/" className="flex items-center gap-3">
@@ -81,6 +82,8 @@ export function Navbar() {
 
         {/* Right actions */}
         <div className="flex items-center gap-2">
+          <ThemeToggle />
+          
           {isAuthenticated ? (
             <div className="hidden items-center gap-3 sm:flex">
               <span className="text-sm font-medium text-foreground">
