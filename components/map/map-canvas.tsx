@@ -16,7 +16,7 @@ interface MapCanvasProps {
 const CATEGORY_KEYS = Object.keys(CATEGORY_META) as IncidentCategory[]
 
 export default function MapCanvas({ incidents, activeId, userPos, onSelect }: MapCanvasProps) {
-  const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || ''
+  const API_KEY = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   return (
     <div className="h-full w-full bg-background relative">
@@ -25,7 +25,7 @@ export default function MapCanvas({ incidents, activeId, userPos, onSelect }: Ma
           <p className="text-muted-foreground font-mono">NEXT_PUBLIC_GOOGLE_MAPS_API_KEY is missing</p>
         </div>
       )}
-      <APIProvider apiKey={API_KEY}>
+      {API_KEY && <APIProvider apiKey={API_KEY}>
         <Map
           mapId="crisiseye_map_id"
           defaultCenter={{ lat: GHANA_CENTER[0], lng: GHANA_CENTER[1] }}
@@ -79,7 +79,7 @@ export default function MapCanvas({ incidents, activeId, userPos, onSelect }: Ma
             </AdvancedMarker>
           )}
         </Map>
-      </APIProvider>
+      </APIProvider>}
     </div>
   )
 }
