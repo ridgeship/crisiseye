@@ -44,7 +44,7 @@ export default function LoginPage() {
       >
         <div className="text-center">
           <Image
-            src="/ghana-coat-of-arms.png"
+            src="/ghana-coat-of-arms-new.png"
             alt="Ghana Coat of Arms"
             width={64}
             height={64}
