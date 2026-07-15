@@ -14,15 +14,15 @@ export function Hero() {
         fill
         quality={100}
         priority
-        className="object-cover brightness-125"
+        className="object-cover"
       />
       {/* Blending overlays */}
       <div
-        className="absolute inset-0 bg-linear-to-r from-background via-background/85 to-background/30"
+        className="absolute inset-0 bg-linear-to-r from-background/95 via-background/40 to-transparent"
         aria-hidden="true"
       />
       <div
-        className="absolute inset-0 bg-linear-to-t from-background via-transparent to-background/70"
+        className="absolute inset-0 bg-linear-to-t from-background/90 via-transparent to-background/30"
         aria-hidden="true"
       />
 
