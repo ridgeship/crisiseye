@@ -121,6 +121,15 @@ export const AGENCIES: Agency[] = [
     icon: Users,
     accent: '#f5b544',
   },
+  {
+    id: 'ecg',
+    name: 'Electricity Company of Ghana',
+    short: 'ECG',
+    phone: '0302-611611',
+    logo: '/agency-ecg.jpg',
+    icon: CloudLightning,
+    accent: '#eab308',
+  },
 ]
 
 // Sample active incidents across Ghana (used by map, dashboard, responder view).

@@ -101,7 +101,10 @@ export function MapView() {
     >
       <div className="flex h-full">
         {/* Sidebar */}
-        <aside className="hidden w-80 shrink-0 flex-col border-r border-border/60 bg-card/40 lg:flex">
+        <aside className={cn(
+          "w-80 shrink-0 flex-col border-r border-border/60 bg-card/40",
+          fullscreen ? "hidden" : "hidden lg:flex"
+        )}>
           <div className="border-b border-border/60 p-4">
             <h1 className="text-lg font-semibold tracking-tight text-foreground">Live Map</h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
@@ -259,7 +262,10 @@ export function MapView() {
           </div>
 
           {/* Legend */}
-          <div className="absolute bottom-3 left-3 z-500 hidden rounded-xl border border-border/60 bg-card/90 p-3 backdrop-blur sm:block">
+          <div className={cn(
+            "absolute bottom-3 left-3 z-500 rounded-xl border border-border/60 bg-card/90 p-3 backdrop-blur",
+            fullscreen ? "hidden" : "hidden sm:block"
+          )}>
             <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               Legend
             </span>

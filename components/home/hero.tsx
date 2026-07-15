@@ -1,3 +1,4 @@
+import Image from 'next/image'
 import Link from 'next/link'
 import { TriangleAlert, Map } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -5,11 +6,15 @@ import { Button } from '@/components/ui/button'
 export function Hero() {
   return (
     <section className="relative overflow-hidden">
-      {/* Network map background */}
-      <div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/earth-at-night.jpg)' }}
-        aria-hidden="true"
+      <Image
+        alt="Earth at night from space"
+        src="/earth-at-night.jpg"
+        placeholder="blur"
+        blurDataURL="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBQYFBAYGBQYHBwYIChAKCgkJChQODwwQFxQYGBcUFhYaHSUfGhsjHBYWICwgIyYnKSopGR8tMC0oMCUoKSj/2wBDAQcHBwoIChMKChMoGhYaKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCgoKCj/wAARCAAIAAoDASIAAhEBAxEB/8QAFQABAQAAAAAAAAAAAAAAAAAAAAb/xAAeEAADAAIBBQAAAAAAAAAAAAABAgMABBEFEiExQf/EABUBAQEAAAAAAAAAAAAAAAAAAAME/8QAFxEBAQEBAAAAAAAAAAAAAAAAAAECAP/aAAwDAQACEQMRAD8AnVp5ZpI2YlJHr2Y9A6gBC0yK2xJ28A+d9Yy1lMy2c//2Q=="
+        fill
+        quality={100}
+        priority
+        className="object-cover brightness-125"
       />
       {/* Blending overlays */}
       <div
