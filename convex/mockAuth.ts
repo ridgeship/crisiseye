@@ -16,12 +16,14 @@ export const register = mutation({
     if (existingUser) {
       throw new Error("User with this email already exists.");
     }
+    const isResponder = args.email.toLowerCase().includes("responder") || args.email.toLowerCase().includes("police");
+    const role = isResponder ? "police" : "citizen";
 
     const userId = await ctx.db.insert("users", {
       name: args.name,
       email: args.email,
       password: args.password,
-      role: "citizen",
+      role: role,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
