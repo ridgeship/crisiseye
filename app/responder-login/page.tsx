@@ -2,8 +2,9 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import Image from "next/image"
 import { useMockAuth } from "@/hooks/useMockAuth"
-import { ShieldCheck, Lock, ChevronRight, AlertCircle, Building2 } from "lucide-react"
+import { Lock, ChevronRight, AlertCircle, Building2 } from "lucide-react"
 
 export default function ResponderLogin() {
   const [username, setUsername] = useState("")
@@ -22,7 +23,13 @@ export default function ResponderLogin() {
       await signIn("password", { email: username, password, flow: "signIn" })
       router.push("/responder")
     } catch (err: any) {
-      setError(err.message || "Invalid responder credentials")
+      let cleanError = err.message || "Invalid responder credentials";
+      if (cleanError.includes("Invalid email or password") || cleanError.includes("Invalid password")) {
+        cleanError = "Invalid agency username or password.";
+      } else if (cleanError.includes("Uncaught Error:")) {
+        cleanError = cleanError.split("Uncaught Error:")[1]?.split(". at handler")[0]?.trim() || cleanError;
+      }
+      setError(cleanError)
     } finally {
       setLoading(false)
     }
@@ -37,8 +44,14 @@ export default function ResponderLogin() {
         
         <div className="relative z-10">
           <div className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-xl bg-blue-600 shadow-lg shadow-blue-500/20">
-              <ShieldCheck className="size-7 text-white" />
+            <div className="flex size-14 items-center justify-center rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 p-2 shadow-lg">
+              <Image 
+                src="/ghana-coat-of-arms-new.png" 
+                alt="Coat of Arms" 
+                width={40} 
+                height={40} 
+                className="object-contain"
+              />
             </div>
             <span className="text-2xl font-bold tracking-tight text-white">CrisisEye</span>
           </div>
@@ -74,8 +87,14 @@ export default function ResponderLogin() {
       <div className="flex w-full flex-col justify-center px-8 sm:px-16 lg:w-1/2">
         <div className="mx-auto w-full max-w-sm">
           <div className="mb-10 text-center lg:text-left">
-            <div className="mx-auto mb-6 flex size-16 items-center justify-center rounded-2xl bg-blue-500/10 text-blue-500 lg:mx-0">
-              <ShieldCheck className="size-8" />
+            <div className="mx-auto mb-6 flex size-20 items-center justify-center rounded-2xl bg-white/5 backdrop-blur-sm border border-white/10 p-3 lg:mx-0">
+              <Image 
+                src="/ghana-coat-of-arms-new.png" 
+                alt="Coat of Arms" 
+                width={56} 
+                height={56} 
+                className="object-contain"
+              />
             </div>
             <h2 className="text-3xl font-bold text-white">Responder Login</h2>
             <p className="mt-2 text-slate-400">Enter your agency credentials to access the operational dashboard.</p>

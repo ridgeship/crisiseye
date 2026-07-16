@@ -9,6 +9,15 @@ export function SiteChrome({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
   // Map page manages its own full-height layout without a footer.
   const isMap = pathname.startsWith('/map')
+  const isResponderOrLogin = pathname.startsWith('/responder')
+
+  if (isResponderOrLogin) {
+    return (
+      <div className="flex min-h-screen flex-col">
+        <main className="flex-1">{children}</main>
+      </div>
+    )
+  }
 
   return (
     <div className="flex min-h-screen flex-col">

@@ -21,6 +21,9 @@ export const reportIncident = mutation({
     }),
     mediaUrls: v.optional(v.array(v.string())),
     voiceReportUrl: v.optional(v.string()),
+    mediaStatus: v.optional(v.string()),
+    aiSummary: v.optional(v.string()),
+    evidenceConfidence: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // We could add user auth check here later

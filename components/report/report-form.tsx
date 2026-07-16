@@ -13,7 +13,8 @@ import {
   Mic,
   Square,
   Play,
-  Pause
+  Pause,
+  AlertTriangle
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -128,6 +129,10 @@ export function ReportForm() {
   const [description, setDescription] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [files, setFiles] = useState<File[]>([])
+  const [analyzingMedia, setAnalyzingMedia] = useState(false)
+  const [mediaStatus, setMediaStatus] = useState<string | null>(null)
+  const [aiSummary, setAiSummary] = useState<string | null>(null)
+  const [evidenceConfidence, setEvidenceConfidence] = useState<string | null>(null)
   const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -162,9 +167,69 @@ export function ReportForm() {
     )
   }
 
-  const onFiles = (list: FileList | null) => {
-    if (!list) return
-    setFiles((prev) => [...prev, ...Array.from(list)].slice(0, 5))
+  const onFiles = async (list: FileList | null) => {
+    if (!list || list.length === 0) return
+    if (!category) {
+      alert("Please select an incident category before uploading media.");
+      return;
+    }
+
+    const newFiles = Array.from(list).slice(0, 5);
+    
+    setAnalyzingMedia(true);
+    setMediaStatus(null);
+    setAiSummary(null);
+    setEvidenceConfidence(null);
+
+    try {
+      // Convert to base64 Data URIs
+      const toBase64 = (f: File): Promise<string> => new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(f);
+        reader.onload = () => resolve(reader.result as string);
+        reader.onerror = err => reject(err);
+      });
+      const base64Files = await Promise.all(newFiles.map(f => toBase64(f)));
+
+      const prompt = `Analyze these images/videos for a reported "${CATEGORY_META[category].label}" emergency. 
+Does the media appear relevant to this type of emergency? 
+Answer strictly in JSON format: 
+{
+  "status": "Relevant" | "Needs Manual Review" | "Irrelevant", 
+  "explanation": "Brief explanation of what is detected."
+}
+If there is clear evidence related to the emergency (e.g. fire/smoke for a Fire Report), status should be Relevant.
+If it's clearly unrelated (memes, QR codes, selfies, random scenery, logos, screenshots, product images), status should be Irrelevant.
+If unsure, status should be Needs Manual Review.`;
+
+      // @ts-ignore
+      const aiResponse = await window.puter.ai.chat(prompt, base64Files);
+      
+      const responseText = typeof aiResponse === 'string' ? aiResponse : aiResponse.toString();
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { status: "Needs Manual Review", explanation: responseText };
+
+      if (parsed.status === "Irrelevant") {
+        setMediaStatus("Rejected");
+        setAiSummary(parsed.explanation);
+        setEvidenceConfidence("Low");
+      } else {
+        setFiles(prev => [...prev, ...newFiles].slice(0, 5));
+        setMediaStatus(parsed.status);
+        setAiSummary(parsed.explanation);
+        setEvidenceConfidence(parsed.status === "Relevant" ? "High" : "Low");
+      }
+
+    } catch (err) {
+      console.error("Vision API Error:", err);
+      // Fallback
+      setFiles(prev => [...prev, ...newFiles].slice(0, 5));
+      setMediaStatus("Needs Manual Review");
+      setAiSummary("Automatic media analysis is temporarily unavailable.");
+      setEvidenceConfidence("Low");
+    } finally {
+      setAnalyzingMedia(false);
+    }
   }
 
   const canSubmit =
@@ -192,7 +257,10 @@ export function ReportForm() {
         },
         // mock URLs for demonstration
         mediaUrls: files.map(f => f.name),
-        voiceReportUrl: voiceBlob ? "voice-report-audio" : undefined
+        voiceReportUrl: voiceBlob ? "voice-report-audio" : undefined,
+        mediaStatus: mediaStatus || undefined,
+        aiSummary: aiSummary || undefined,
+        evidenceConfidence: evidenceConfidence || undefined
       });
       
       setSubmitted(true)
@@ -247,6 +315,9 @@ export function ReportForm() {
               setDescription('')
               setConfirmed(false)
               setFiles([])
+              setMediaStatus(null)
+              setAiSummary(null)
+              setEvidenceConfidence(null)
               setVoiceBlob(null)
               setLocation({ mode: 'auto', address: '', status: 'idle' })
             }}
@@ -386,18 +457,62 @@ export function ReportForm() {
           accept="image/*,video/*"
           multiple
           className="hidden"
-          onChange={(e) => onFiles(e.target.files)}
+          onChange={(e) => {
+            onFiles(e.target.files)
+            e.target.value = ''
+          }}
         />
         <button
           type="button"
+          disabled={analyzingMedia}
           onClick={() => fileInputRef.current?.click()}
-          className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground"
+          className="mt-4 flex w-full items-center justify-center gap-2.5 rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground transition-colors hover:border-primary/50 hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Upload className="size-4" />
           Upload photos or video
         </button>
+
+        {analyzingMedia && (
+          <div className="mt-4 flex items-center justify-center gap-2 rounded-lg border border-primary/20 bg-primary/5 p-4 text-primary">
+            <Loader2 className="size-5 animate-spin" />
+            <span className="text-sm font-medium">Analysing media...</span>
+          </div>
+        )}
+
+        {!analyzingMedia && mediaStatus === "Rejected" && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+            <X className="size-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold">✖ This media does not appear to relate to the selected emergency.</p>
+              <p className="mt-1 text-sm opacity-90">Please upload original evidence from the incident.</p>
+              {aiSummary && <p className="mt-2 text-xs italic opacity-80">AI Note: {aiSummary}</p>}
+            </div>
+          </div>
+        )}
+
+        {!analyzingMedia && files.length > 0 && mediaStatus === "Relevant" && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-500">
+            <CheckCircle2 className="size-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold">✔ Media appears relevant to this emergency.</p>
+              {aiSummary && <p className="mt-1 text-xs opacity-90">AI Note: {aiSummary}</p>}
+            </div>
+          </div>
+        )}
+
+        {!analyzingMedia && files.length > 0 && mediaStatus === "Needs Manual Review" && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-orange-500/20 bg-orange-500/10 p-4 text-orange-500">
+            <AlertTriangle className="size-5 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-semibold">⚠ Unable to confidently classify the media.</p>
+              <p className="mt-1 text-sm opacity-90">Responders will manually review it.</p>
+              {aiSummary && <p className="mt-2 text-xs italic opacity-80">AI Note: {aiSummary}</p>}
+            </div>
+          </div>
+        )}
+
         {files.length > 0 && (
-          <ul className="mt-2 space-y-1.5">
+          <ul className="mt-4 space-y-1.5">
             {files.map((file, i) => (
               <li
                 key={`${file.name}-${i}`}

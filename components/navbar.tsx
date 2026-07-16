@@ -123,18 +123,18 @@ export function Navbar() {
           <ThemeToggle />
           
           {isAuthenticated && roleDisplay ? (
-            <div className="relative hidden items-center gap-3 sm:flex" ref={dropdownRef}>
+            <div className="relative flex items-center gap-2 sm:gap-3" ref={dropdownRef}>
               <button 
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className={cn(
-                  "flex items-center gap-2 rounded-full border border-border/70 pr-3 pl-1.5 py-1.5 transition-colors hover:bg-secondary/50",
+                  "flex items-center gap-1.5 sm:gap-2 rounded-full border border-border/70 pr-2 sm:pr-3 pl-1 sm:pl-1.5 py-1 sm:py-1.5 transition-colors hover:bg-secondary/50",
                   dropdownOpen && "bg-secondary/50"
                 )}
               >
-                <div className={cn("flex size-7 items-center justify-center rounded-full", roleDisplay.bg, roleDisplay.color)}>
-                  <roleDisplay.icon className="size-4" />
+                <div className={cn("flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-full", roleDisplay.bg, roleDisplay.color)}>
+                  <roleDisplay.icon className="size-3.5 sm:size-4" />
                 </div>
-                <span className="text-sm font-medium text-foreground">
+                <span className="max-w-[100px] truncate text-xs sm:text-sm font-medium text-foreground sm:max-w-[150px]">
                   {roleDisplay.label}
                 </span>
                 <ChevronDown className="size-4 text-muted-foreground" />

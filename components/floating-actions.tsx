@@ -100,12 +100,12 @@ export function FloatingActions() {
       clearInterval(progressInterval.current!)
       setSheetOpen(true)
       
-      // Auto-send after 3 seconds
+      // Auto-send after 4.5 seconds
       autoSendTimer.current = setTimeout(() => {
         if (document.getElementById("sos-sheet")) {
           sendReport("Unknown Emergency", true)
         }
-      }, 3000)
+      }, 4500)
 
     }, 2000)
   }
@@ -183,7 +183,7 @@ export function FloatingActions() {
           >
             <div className="text-center">
               <h3 className="text-xl font-bold text-destructive">What is happening?</h3>
-              <p className="mt-1 text-sm text-muted-foreground">Select an option or wait 3s to auto-send.</p>
+              <p className="mt-1 text-sm text-muted-foreground">Select an option or wait 4s to auto-send.</p>
             </div>
             
             <div className="mt-6 grid grid-cols-2 gap-3">
@@ -217,7 +217,7 @@ export function FloatingActions() {
               <motion.div
                 initial={{ width: "0%" }}
                 animate={{ width: "100%" }}
-                transition={{ duration: 3, ease: "linear" }}
+                transition={{ duration: 4.5, ease: "linear" }}
                 className="h-full bg-destructive"
               />
             </div>

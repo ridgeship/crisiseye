@@ -93,7 +93,9 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
     if (!isOffline) {
       try {
         await reportIncident(payload)
-        alert(`SOS Dispatched: ${payload.type}`)
+        if (payload.type !== "Unknown Emergency") {
+          alert(`SOS Dispatched: ${payload.type}`)
+        }
         return
       } catch (e) {
         console.warn("Failed to dispatch report online. Queuing as fallback...", e)

@@ -43,6 +43,11 @@ export default defineSchema({
     escalationLevel: v.optional(v.number()), // 0, 1, 2, 3
     acknowledgementStatus: v.optional(v.string()), // 'pending', 'acknowledged', 'escalated'
     
+    // AI Vision fields
+    mediaStatus: v.optional(v.string()), // 'Relevant', 'Needs Manual Review', 'Rejected'
+    aiSummary: v.optional(v.string()),
+    evidenceConfidence: v.optional(v.string()), // 'High', 'Medium', 'Low'
+    
     // Emergency Timeline (Array of events)
     timeline: v.optional(
       v.array(

@@ -159,8 +159,8 @@ export default function LiveQueue() {
               </div>
 
               {/* Internal Service: Verification Engine Output */}
-              <div className="mb-8 rounded-lg border border-slate-800 bg-slate-900/30 p-4">
-                <div className="mb-3 flex items-center gap-2">
+              <div className="mb-8 space-y-4 rounded-lg border border-slate-800 bg-slate-900/30 p-4">
+                <div className="flex items-center gap-2">
                   <ShieldAlert className="size-4 text-emerald-500" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Verification Engine</h3>
                 </div>
@@ -184,6 +184,39 @@ export default function LiveQueue() {
                     <p className="font-semibold text-red-400">Level {selectedIncident.escalationLevel || 1}</p>
                   </div>
                 </div>
+
+                {(selectedIncident.mediaStatus || selectedIncident.aiSummary) && (
+                  <div className="mt-4 border-t border-slate-800 pt-4">
+                    <h4 className="mb-2 text-[10px] font-bold uppercase tracking-wider text-slate-500">AI Media Analysis</h4>
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <div>
+                        <p className="text-xs text-slate-500">Media Status</p>
+                        <p className={cn(
+                          "font-semibold text-sm mt-0.5",
+                          selectedIncident.mediaStatus === "Relevant" ? "text-emerald-400" :
+                          selectedIncident.mediaStatus === "Needs Manual Review" ? "text-orange-400" : "text-red-400"
+                        )}>
+                          {selectedIncident.mediaStatus || "Unknown"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-slate-500">Evidence Confidence</p>
+                        <p className={cn(
+                          "font-semibold text-sm mt-0.5",
+                          selectedIncident.evidenceConfidence === "High" ? "text-emerald-400" :
+                          selectedIncident.evidenceConfidence === "Medium" ? "text-amber-400" : "text-red-400"
+                        )}>
+                          {selectedIncident.evidenceConfidence || "Unknown"}
+                        </p>
+                      </div>
+                    </div>
+                    {selectedIncident.aiSummary && (
+                      <div className="mt-3 rounded-md bg-slate-900/50 p-3">
+                        <p className="text-xs text-slate-400 italic">"{selectedIncident.aiSummary}"</p>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Dispatch Controls */}
