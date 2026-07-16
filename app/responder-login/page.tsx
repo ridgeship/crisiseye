@@ -20,7 +20,7 @@ export default function ResponderLogin() {
     setLoading(true)
 
     try {
-      await signIn("password", { email: username, password, flow: "signIn" })
+      await signIn("password", { email: username, password, flow: "signIn", isResponderPortal: true })
       router.push("/responder")
     } catch (err: any) {
       let cleanError = err.message || "Invalid responder credentials";

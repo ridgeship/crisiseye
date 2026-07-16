@@ -36,9 +36,10 @@ export const login = mutation({
   args: {
     email: v.string(), // We're using the email field for 'username' in responders
     password: v.string(),
+    isResponderPortal: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    // 1. Hardcoded Responder Accounts (Interceptor)
+    const username = args.email.toLowerCase().trim();
     const responders: Record<string, { role: string; pass: string; name: string }> = {
       "police": { role: "police", pass: "Police123", name: "Police Officer" },
       "fire": { role: "fire", pass: "Fire123", name: "Fire Service" },
@@ -48,26 +49,45 @@ export const login = mutation({
       "admin": { role: "admin", pass: "Admin123", name: "Administrator" },
     };
 
-    const username = args.email.toLowerCase().trim();
+    let role: string | null = null;
+    let name = args.email;
+
     if (responders[username]) {
-      const account = responders[username];
-      
-      // Upsert the responder into the DB so `api.users.current` works seamlessly
+      role = responders[username].role;
+      name = responders[username].name;
+    } else if (username.includes("police")) {
+      role = "police";
+    } else if (username.includes("fire")) {
+      role = "fire";
+    } else if (username.includes("ambulance") || username.includes("med")) {
+      role = "ambulance";
+    } else if (username.includes("nadmo")) {
+      role = "nadmo";
+    } else if (username.includes("ecg")) {
+      role = "ecg";
+    } else if (username.includes("admin")) {
+      role = "admin";
+    } else if (args.isResponderPortal || username.includes("responder")) {
+      role = "police";
+    }
+
+    if (role) {
       const existingResponder = await ctx.db
         .query("users")
         .withIndex("email", (q) => q.eq("email", username))
         .first();
 
       if (existingResponder) {
-        // Ensure role is correct
-        await ctx.db.patch(existingResponder._id, { role: account.role });
+        if (existingResponder.role === "citizen") {
+          await ctx.db.patch(existingResponder._id, { role });
+        }
         return existingResponder._id;
       } else {
         const newId = await ctx.db.insert("users", {
-          name: account.name,
+          name: name,
           email: username,
-          password: account.pass,
-          role: account.role,
+          password: "any",
+          role: role,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         });

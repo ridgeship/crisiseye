@@ -35,6 +35,7 @@ export function useMockAuth() {
       id = await loginMut({
         email: args.email,
         password: args.password,
+        isResponderPortal: args.isResponderPortal,
       });
     }
     
