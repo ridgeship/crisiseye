@@ -17,9 +17,12 @@ import {
 
 const COLORS = ['#ef4444', '#f59e0b', '#10b981', '#3b82f6', '#8b5cf6'];
 
+import { useMockAuth } from "@/hooks/useMockAuth"
+
 export default function AnalyticsDashboard() {
-  const stats = useQuery(api.responder.getStats)
-  const allIncidents = useQuery(api.responder.getLiveQueue)
+  const { user } = useMockAuth()
+  const stats = useQuery(api.responder.getStats, user ? { mockUserId: user._id } : "skip")
+  const allIncidents = useQuery(api.responder.getLiveQueue, user ? { mockUserId: user._id } : "skip")
 
   if (stats === undefined || allIncidents === undefined) {
     return <div className="p-8 text-center text-slate-400">Loading analytics...</div>

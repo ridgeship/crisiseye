@@ -5,8 +5,11 @@ import { api } from "@/convex/_generated/api"
 import { APIProvider, Map, AdvancedMarker, Pin } from "@vis.gl/react-google-maps"
 import { AlertTriangle, Loader2 } from "lucide-react"
 
+import { useMockAuth } from "@/hooks/useMockAuth"
+
 export default function ResponderMap() {
-  const incidents = useQuery(api.responder.getLiveQueue)
+  const { user } = useMockAuth()
+  const incidents = useQuery(api.responder.getLiveQueue, user ? { mockUserId: user._id } : "skip")
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
 
   if (!apiKey || apiKey === "your_google_maps_api_key_here") {

@@ -12,9 +12,11 @@ import {
   Wind,
   ShieldCheck
 } from "lucide-react"
+import { useMockAuth } from "@/hooks/useMockAuth"
 
 export default function ResponderOverview() {
-  const stats = useQuery(api.responder.getStats)
+  const { user } = useMockAuth()
+  const stats = useQuery(api.responder.getStats, user ? { mockUserId: user._id } : "skip")
 
   return (
     <div className="space-y-6">
