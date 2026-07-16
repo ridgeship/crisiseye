@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import { useMockAuth } from "@/hooks/useMockAuth";
 import { useRouter } from "next/navigation";
@@ -14,8 +14,18 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useMockAuth();
+  const { signIn, user } = useMockAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    if (user) {
+      if (user.role && user.role !== "citizen") {
+        router.push("/responder");
+      } else {
+        router.push("/");
+      }
+    }
+  }, [user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,7 +36,7 @@ export default function LoginPage() {
       } else {
         await signIn("password", { email, password, flow: "signIn" });
       }
-      router.push("/dashboard");
+      // Routing is handled by the useEffect watching the user object
     } catch (error) {
       console.error("Auth error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -36,8 +46,7 @@ export default function LoginPage() {
       } else {
         alert(`Authentication failed: ${errorMessage}`);
       }
-    } finally {
-      setLoading(false);
+      setLoading(false); // Only stop loading if there's an error, otherwise let the redirect happen
     }
   };
 

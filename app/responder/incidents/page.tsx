@@ -5,23 +5,47 @@ import { useQuery, useMutation } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import { Search, MapPin, Clock, CheckCircle2, AlertTriangle, Crosshair, Phone, MoreHorizontal, Check, ShieldAlert } from "lucide-react"
+import { useMockAuth } from "@/hooks/useMockAuth"
 
 export default function LiveQueue() {
+  const { user } = useMockAuth()
   const incidents = useQuery(api.responder.getLiveQueue)
   const updateStatus = useMutation(api.responder.updateIncidentStatus)
   const assignUnit = useMutation(api.responder.assignUnit)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [search, setSearch] = useState("")
 
-  if (incidents === undefined) {
+  if (incidents === undefined || user === undefined) {
     return <div className="p-8 text-center text-slate-400">Loading live queue...</div>
   }
 
-  const filtered = incidents.filter(i => 
+  const rolePriorities: Record<string, string[]> = {
+    police: ["crime", "accident"], // crime, road accidents
+    fire: ["fire"], // fire, explosions (mapped to fire usually)
+    ambulance: ["medical"], // medical emergencies
+    nadmo: ["flood", "storm"], // floods, disasters
+    ecg: ["other"], // electrical mapped to other currently
+  };
+
+  const prioritizedCategories = user?.role ? (rolePriorities[user.role] || []) : [];
+
+  let filtered = incidents.filter(i => 
     i.description?.toLowerCase().includes(search.toLowerCase()) || 
     i.type.toLowerCase().includes(search.toLowerCase()) ||
     i.location.address?.toLowerCase().includes(search.toLowerCase())
   )
+
+  // Sort: Put role's priority categories first, then sort by timestamp
+  filtered = filtered.sort((a, b) => {
+    const aPriority = prioritizedCategories.includes(a.type) ? 1 : 0;
+    const bPriority = prioritizedCategories.includes(b.type) ? 1 : 0;
+    
+    if (aPriority !== bPriority) {
+      return bPriority - aPriority; // Priority categories first
+    }
+    // Then sort chronologically (newest first)
+    return b.timestamp - a.timestamp;
+  });
 
   const selectedIncident = incidents.find(i => i._id === selectedId)
 

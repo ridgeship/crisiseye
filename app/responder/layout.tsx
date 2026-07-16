@@ -111,29 +111,38 @@ export default function ResponderLayout({ children }: { children: React.ReactNod
       {/* Main Content Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Command Bar */}
-        <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-800 bg-[#0d1424] px-6 shadow-sm">
-          <div className="flex items-center gap-4">
-            <Image
-              src="/ghana-coat-of-arms-new.png"
-              alt="Ghana"
-              width={32}
-              height={32}
-              className="object-contain"
-            />
-            <div className="h-6 w-px bg-slate-700" />
-            <div className="flex items-center gap-3">
+        <header className="flex h-20 shrink-0 items-center justify-between border-b border-slate-800 bg-[#0d1424] px-6 shadow-sm">
+          <div className="flex items-center gap-5">
+            <div className="rounded-full bg-white/5 p-1.5 backdrop-blur-sm border border-white/10">
+              <Image
+                src="/ghana-coat-of-arms-new.png"
+                alt="Ghana"
+                width={44}
+                height={44}
+                className="object-contain drop-shadow-md"
+              />
+            </div>
+            <div className="h-10 w-px bg-slate-700/50" />
+            <div className="flex items-center gap-4">
               {agency.logo !== "/ghana-coat-of-arms-new.png" && (
-                <Image
-                  src={agency.logo}
-                  alt={agency.short}
-                  width={28}
-                  height={28}
-                  className="rounded object-contain"
-                />
+                <div className="rounded-full bg-white p-1 shadow-md">
+                  <Image
+                    src={agency.logo}
+                    alt={agency.short}
+                    width={40}
+                    height={40}
+                    className="rounded-full object-contain"
+                  />
+                </div>
               )}
-              <h1 className="font-semibold tracking-tight text-white">
-                {agency.name}
-              </h1>
+              <div className="flex flex-col">
+                <h1 className="text-lg font-bold tracking-tight text-white leading-tight">
+                  {agency.name}
+                </h1>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                  {agency.short} Operations Command
+                </p>
+              </div>
             </div>
           </div>
           
