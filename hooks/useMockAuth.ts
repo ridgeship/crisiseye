@@ -18,6 +18,7 @@ export function useMockAuth() {
 
   const registerMut = useMutation(api.mockAuth.register);
   const loginMut = useMutation(api.mockAuth.login);
+  const logoutMut = useMutation(api.mockAuth.logout);
   
   // Query for the user document natively, similar to how Convex auth works
   const user = useQuery(api.users.current, { mockUserId: userId ?? undefined });
@@ -43,6 +44,7 @@ export function useMockAuth() {
   };
 
   const signOut = async () => {
+    await logoutMut();
     localStorage.removeItem("crisiseye_session");
     setUserId(null);
   };

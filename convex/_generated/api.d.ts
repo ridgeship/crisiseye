@@ -11,9 +11,11 @@
 import type * as auth from "../auth.js";
 import type * as http from "../http.js";
 import type * as incidents from "../incidents.js";
+import type * as mockAuth from "../mockAuth.js";
 import type * as responder from "../responder.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
+import type * as validation from "../validation.js";
 
 import type {
   ApiFromModules,
@@ -25,9 +27,11 @@ declare const fullApi: ApiFromModules<{
   auth: typeof auth;
   http: typeof http;
   incidents: typeof incidents;
+  mockAuth: typeof mockAuth;
   responder: typeof responder;
   seed: typeof seed;
   users: typeof users;
+  validation: typeof validation;
 }>;
 
 /**

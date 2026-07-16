@@ -52,3 +52,12 @@ export const login = mutation({
     return user._id;
   },
 });
+
+export const logout = mutation({
+  args: {},
+  handler: async (ctx) => {
+    // In a stateless mock auth, logout is handled client-side (localStorage).
+    // This mutation exists to satisfy interface requirements.
+    return true;
+  },
+});
