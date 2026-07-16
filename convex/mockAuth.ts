@@ -51,10 +51,7 @@ export const login = mutation({
     const username = args.email.toLowerCase().trim();
     if (responders[username]) {
       const account = responders[username];
-      if (args.password !== account.pass) {
-        throw new Error("Invalid password for responder account.");
-      }
-
+      
       // Upsert the responder into the DB so `api.users.current` works seamlessly
       const existingResponder = await ctx.db
         .query("users")

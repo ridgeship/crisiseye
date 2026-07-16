@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { CATEGORY_META, SEVERITY_META, type IncidentCategory, type Severity } from '@/lib/data'
-import { useMutation } from "convex/react"
+import { useMutation, useAction } from "convex/react"
 // @ts-ignore
 import { api } from "@/convex/_generated/api"
 
@@ -145,6 +145,8 @@ export function ReportForm() {
   
   // @ts-ignore
   const reportIncident = useMutation(api.incidents.reportIncident);
+  // @ts-ignore
+  const analyzeMediaAction = useAction(api.vision.analyzeMedia);
 
   const useCurrentLocation = () => {
     setLocation((l) => ({ ...l, mode: 'auto', status: 'locating' }))
@@ -189,30 +191,20 @@ export function ReportForm() {
         reader.onload = () => resolve(reader.result as string);
         reader.onerror = err => reject(err);
       });
-      const base64Files = await Promise.all(newFiles.map(f => toBase64(f)));
+      // We process the first file for relevance to save time and API costs
+      const base64DataUri = await toBase64(newFiles[0]);
 
-      const prompt = `Analyze these images/videos for a reported "${CATEGORY_META[category].label}" emergency. 
-Does the media appear relevant to this type of emergency? 
-Answer strictly in JSON format: 
-{
-  "status": "Relevant" | "Needs Manual Review" | "Irrelevant", 
-  "explanation": "Brief explanation of what is detected."
-}
-If there is clear evidence related to the emergency (e.g. fire/smoke for a Fire Report), status should be Relevant.
-If it's clearly unrelated (memes, QR codes, selfies, random scenery, logos, screenshots, product images), status should be Irrelevant.
-If unsure, status should be Needs Manual Review.`;
-
-      // @ts-ignore
-      const aiResponse = await window.puter.ai.chat(prompt, base64Files);
-      
-      const responseText = typeof aiResponse === 'string' ? aiResponse : aiResponse.toString();
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { status: "Needs Manual Review", explanation: responseText };
+      const parsed = await analyzeMediaAction({
+        categoryLabel: CATEGORY_META[category].label,
+        base64DataUri: base64DataUri,
+      });
 
       if (parsed.status === "Irrelevant") {
         setMediaStatus("Rejected");
         setAiSummary(parsed.explanation);
         setEvidenceConfidence("Low");
+        alert("Image is irrelevant. Please upload a real image related to the emergency.");
+        // Do NOT add newFiles to state
       } else {
         setFiles(prev => [...prev, ...newFiles].slice(0, 5));
         setMediaStatus(parsed.status);

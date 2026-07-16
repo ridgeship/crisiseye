@@ -32,8 +32,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { RoleSwitcher } from "@/components/dev/role-switcher";
 import { OfflineQueueProvider } from "@/components/offline-queue-provider";
 
-import Script from 'next/script'
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -42,7 +40,6 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="bg-background font-sans antialiased" suppressHydrationWarning>
-        <Script src="https://js.puter.com/v2/" strategy="beforeInteractive" />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
