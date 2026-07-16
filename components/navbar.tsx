@@ -7,8 +7,7 @@ import { useState } from 'react'
 import { Menu, X, UserRound } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button, buttonVariants } from '@/components/ui/button'
-import { useConvexAuth, useQuery } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useMockAuth } from "@/hooks/useMockAuth";
 // @ts-ignore
 import { api } from "@/convex/_generated/api";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -25,10 +24,7 @@ const NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const { isAuthenticated } = useConvexAuth()
-  const { signOut } = useAuthActions()
-  // @ts-ignore
-  const user = useQuery(api.users.current)
+  const { isAuthenticated, signOut, user } = useMockAuth()
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href)

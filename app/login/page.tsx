@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
-import { useAuthActions } from "@convex-dev/auth/react";
+import { useMockAuth } from "@/hooks/useMockAuth";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2, Eye, EyeOff } from "lucide-react";
@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn } = useAuthActions();
+  const { signIn } = useMockAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {

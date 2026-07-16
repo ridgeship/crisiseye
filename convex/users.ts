@@ -3,8 +3,16 @@ import { auth } from "./auth";
 import { v } from "convex/values";
 
 export const current = query({
-  args: {},
-  handler: async (ctx) => {
+  args: {
+    mockUserId: v.optional(v.id("users"))
+  },
+  handler: async (ctx, args) => {
+    // Demo bypass for mock auth
+    if (args.mockUserId) {
+      return await ctx.db.get(args.mockUserId);
+    }
+    
+    // Original Convex auth fallback
     const userId = await auth.getUserId(ctx);
     if (userId === null) {
       return null;
