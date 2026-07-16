@@ -17,7 +17,7 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AGENCIES } from "@/lib/data"
-import { useAuthActions } from "@convex-dev/auth/react"
+import { useMockAuth } from "@/hooks/useMockAuth"
 
 const NAV_ITEMS = [
   { href: "/responder", label: "Dashboard", icon: LayoutDashboard },
@@ -27,10 +27,9 @@ const NAV_ITEMS = [
 ]
 
 export default function ResponderLayout({ children }: { children: React.ReactNode }) {
-  const user = useQuery(api.users.current)
+  const { signOut, user } = useMockAuth()
   const router = useRouter()
   const pathname = usePathname()
-  const { signOut } = useAuthActions()
   const [time, setTime] = useState(new Date())
 
   useEffect(() => {
