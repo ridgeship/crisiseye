@@ -28,8 +28,14 @@ export default function LoginPage() {
       }
       router.push("/dashboard");
     } catch (error) {
-      console.error(error);
-      alert("Authentication failed. Please check your credentials.");
+      console.error("Auth error:", error);
+      const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
+      
+      if (isRegister) {
+        alert(`Registration failed: ${errorMessage}`);
+      } else {
+        alert(`Authentication failed: ${errorMessage}`);
+      }
     } finally {
       setLoading(false);
     }

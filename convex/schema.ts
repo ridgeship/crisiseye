@@ -13,6 +13,8 @@ export default defineSchema({
     phoneVerificationTime: v.optional(v.number()),
     isAnonymous: v.optional(v.boolean()),
     role: v.optional(v.string()), // 'citizen', 'police', 'fire', 'ambulance', 'nadmo', 'ecg', 'admin'
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   }).index("email", ["email"]),
 
   incidents: defineTable({
