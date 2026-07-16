@@ -17,16 +17,26 @@ export const reportIncident = mutation({
       lat: v.number(),
       lng: v.number(),
       address: v.optional(v.string()),
+      isApproximate: v.optional(v.boolean()),
     }),
     mediaUrls: v.optional(v.array(v.string())),
     voiceReportUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     // We could add user auth check here later
+    const now = Date.now();
     const newIncidentId = await ctx.db.insert("incidents", {
       ...args,
       status: "Active",
-      timestamp: Date.now(),
+      timestamp: now,
+      verificationStatus: "pending",
+      escalationLevel: 1,
+      acknowledgementStatus: "pending",
+      timeline: [{
+        time: now,
+        status: "Citizen Report Received",
+        note: "Initial report received from citizen"
+      }]
     });
     return newIncidentId;
   },

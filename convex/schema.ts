@@ -23,6 +23,7 @@ export default defineSchema({
       lat: v.number(),
       lng: v.number(),
       address: v.optional(v.string()),
+      isApproximate: v.optional(v.boolean()),
     }),
     mediaUrls: v.optional(v.array(v.string())), // Images or Video URLs (or storage IDs)
     voiceReportUrl: v.optional(v.string()), // Voice note URL

@@ -30,6 +30,7 @@ export const viewport: Viewport = {
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { RoleSwitcher } from "@/components/dev/role-switcher";
+import { OfflineQueueProvider } from "@/components/offline-queue-provider";
 
 export default function RootLayout({
   children,
@@ -46,10 +47,12 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <ConvexClientProvider>
-            <Suspense fallback={null}>
-              <SiteChrome>{children}</SiteChrome>
-            </Suspense>
-            <RoleSwitcher />
+            <OfflineQueueProvider>
+              <Suspense fallback={null}>
+                <SiteChrome>{children}</SiteChrome>
+              </Suspense>
+              <RoleSwitcher />
+            </OfflineQueueProvider>
           </ConvexClientProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

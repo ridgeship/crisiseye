@@ -101,11 +101,19 @@ export default function LiveQueue() {
                     {selectedIncident.severity}
                   </span>
                 </div>
-                <p className="mt-2 flex items-center gap-2 text-sm text-slate-400">
-                  <MapPin className="size-4" />
-                  {selectedIncident.location.address} 
-                  <span className="font-mono text-xs opacity-50">({selectedIncident.location.lat.toFixed(4)}, {selectedIncident.location.lng.toFixed(4)})</span>
-                </p>
+                <div className="mt-2 flex flex-col gap-1">
+                  <p className="flex items-center gap-2 text-sm text-slate-400">
+                    <MapPin className="size-4" />
+                    {selectedIncident.location.address} 
+                    <span className="font-mono text-xs opacity-50">({selectedIncident.location.lat.toFixed(4)}, {selectedIncident.location.lng.toFixed(4)})</span>
+                  </p>
+                  {selectedIncident.location.isApproximate && (
+                    <span className="inline-flex w-fit items-center gap-1 rounded bg-orange-500/10 px-2 py-0.5 text-xs font-medium text-orange-400 border border-orange-500/20">
+                      <AlertTriangle className="size-3" />
+                      Approximate IP Location
+                    </span>
+                  )}
+                </div>
               </div>
               <div className="text-right">
                 <p className="font-mono text-sm text-slate-500">ID: {selectedIncident._id}</p>
@@ -132,14 +140,24 @@ export default function LiveQueue() {
                   <ShieldAlert className="size-4 text-emerald-500" />
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">Verification Engine</h3>
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+                <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
                     <p className="text-slate-500">Confidence Score</p>
-                    <p className="font-mono text-lg font-bold text-emerald-400">{selectedIncident.confidenceScore ?? 0}%</p>
+                    <p className={cn(
+                      "font-mono text-lg font-bold",
+                      (selectedIncident.confidenceScore ?? 0) >= 80 ? "text-emerald-400" :
+                      (selectedIncident.confidenceScore ?? 0) >= 50 ? "text-amber-400" : "text-red-400"
+                    )}>
+                      {selectedIncident.confidenceScore ?? 0}%
+                    </p>
                   </div>
                   <div>
                     <p className="text-slate-500">Status</p>
                     <p className="font-semibold text-slate-200 capitalize">{selectedIncident.verificationStatus || "Pending"}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-500">Escalation Level</p>
+                    <p className="font-semibold text-red-400">Level {selectedIncident.escalationLevel || 1}</p>
                   </div>
                 </div>
               </div>

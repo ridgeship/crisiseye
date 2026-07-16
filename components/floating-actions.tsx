@@ -7,42 +7,65 @@ import { useMutation } from 'convex/react'
 // @ts-ignore
 import { api } from '@/convex/_generated/api'
 
+import { useOfflineQueue } from './offline-queue-provider'
+
 export function FloatingActions() {
   const [isPressing, setIsPressing] = useState(false)
   const [progress, setProgress] = useState(0)
   const [sheetOpen, setSheetOpen] = useState(false)
-  const [location, setLocation] = useState<{ lat: number, lng: number } | null>(null)
+  const [location, setLocation] = useState<{ lat: number, lng: number, isApproximate?: boolean } | null>(null)
   
   const pressTimer = useRef<NodeJS.Timeout | null>(null)
   const progressInterval = useRef<NodeJS.Timeout | null>(null)
   const autoSendTimer = useRef<NodeJS.Timeout | null>(null)
 
-  // @ts-ignore
-  const reportIncident = useMutation(api.incidents.reportIncident)
+  const { enqueueReport } = useOfflineQueue()
 
-  const captureLocation = () => {
-    return new Promise<{ lat: number, lng: number }>((resolve, reject) => {
-      if (!('geolocation' in navigator)) return reject('No geolocation')
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-        (err) => reject(err)
-      )
-    })
+  const captureLocation = async (): Promise<{ lat: number; lng: number; isApproximate?: boolean }> => {
+    try {
+      // 1. Try Device GPS first
+      return await new Promise<{ lat: number; lng: number; isApproximate?: boolean }>((resolve, reject) => {
+        if (!('geolocation' in navigator)) return reject(new Error('No geolocation available'));
+        navigator.geolocation.getCurrentPosition(
+          (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, isApproximate: false }),
+          (err) => reject(err),
+          { enableHighAccuracy: true, timeout: 5000, maximumAge: 0 }
+        );
+      });
+    } catch (error) {
+      console.warn("GPS failed or denied. Falling back to IP-based location...", error);
+      // 2. Fallback to IP Geolocation
+      try {
+        const response = await fetch('https://ipapi.co/json/');
+        const data = await response.json();
+        if (data && data.latitude && data.longitude) {
+          return {
+            lat: data.latitude,
+            lng: data.longitude,
+            isApproximate: true
+          };
+        }
+        throw new Error("Invalid IP location data");
+      } catch (ipError) {
+        console.error("IP Location fallback failed.", ipError);
+        throw new Error("Could not determine location");
+      }
+    }
   }
 
   const sendReport = async (type: string, isUnknown = false) => {
     try {
-      await reportIncident({
+      await enqueueReport({
         type: type,
         description: isUnknown ? "Auto-dispatched via SOS timeout" : "Dispatched via SOS",
         severity: "Critical",
         location: {
           lat: location?.lat || 0,
           lng: location?.lng || 0,
-          address: "SOS Location"
+          address: "SOS Location",
+          isApproximate: location?.isApproximate || false
         }
       })
-      alert(`SOS Dispatched: ${type}`)
     } catch (error) {
       console.error(error)
       alert("Failed to dispatch SOS. Call emergency numbers directly!")
@@ -109,7 +132,8 @@ export function FloatingActions() {
           onPointerDown={startPress}
           onPointerUp={endPress}
           onPointerLeave={endPress}
-          className="group relative flex size-16 items-center justify-center rounded-full bg-destructive shadow-2xl transition-transform hover:scale-105"
+          style={{ WebkitTouchCallout: 'none' }}
+          className="group relative flex size-16 items-center justify-center rounded-full bg-destructive shadow-2xl transition-transform hover:scale-105 select-none touch-none"
           aria-label="Hold for SOS"
         >
           {isPressing && (
@@ -136,7 +160,7 @@ export function FloatingActions() {
             </svg>
           )}
           <svg viewBox="0 0 100 100" className="size-10 text-white" fill="none" stroke="currentColor" strokeWidth="6" strokeLinecap="round" strokeLinejoin="round">
-            <text x="50" y="55" fontSize="30" fontWeight="bold" textAnchor="middle" fill="currentColor" stroke="none">SOS</text>
+            <text x="50" y="55" fontSize="30" fontWeight="bold" textAnchor="middle" fill="currentColor" stroke="none" className="select-none pointer-events-none">SOS</text>
             <path d="M 38 28 Q 50 18 62 28" />
             <path d="M 43 18 Q 50 12 57 18" />
             <path d="M 47 10 Q 50 8 53 10" />
