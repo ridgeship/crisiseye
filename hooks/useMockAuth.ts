@@ -5,6 +5,7 @@ import { Id } from "@/convex/_generated/dataModel";
 
 export function useMockAuth() {
   const [userId, setUserId] = useState<Id<"users"> | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   
   // Safely initialize from localStorage only on client
   useEffect(() => {
@@ -14,6 +15,7 @@ export function useMockAuth() {
         setUserId(stored as Id<"users">);
       }
     }
+    setIsLoading(false);
   }, []);
 
   const registerMut = useMutation(api.mockAuth.register);
@@ -51,6 +53,7 @@ export function useMockAuth() {
   };
 
   return {
+    isLoading,
     isAuthenticated: !!userId,
     user,
     signIn,

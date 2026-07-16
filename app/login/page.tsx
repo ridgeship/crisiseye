@@ -14,10 +14,11 @@ export default function LoginPage() {
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, user } = useMockAuth();
+  const { signIn, user, isLoading: authLoading } = useMockAuth();
   const router = useRouter();
 
   useEffect(() => {
+    if (authLoading) return;
     if (user) {
       if (user.role && user.role !== "citizen") {
         router.push("/responder");
@@ -25,7 +26,7 @@ export default function LoginPage() {
         router.push("/");
       }
     }
-  }, [user, router]);
+  }, [user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

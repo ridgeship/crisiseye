@@ -27,7 +27,7 @@ const NAV_ITEMS = [
 ]
 
 export default function ResponderLayout({ children }: { children: React.ReactNode }) {
-  const { signOut, user } = useMockAuth()
+  const { signOut, user, isLoading } = useMockAuth()
   const router = useRouter()
   const pathname = usePathname()
   const [time, setTime] = useState(new Date())
@@ -38,14 +38,18 @@ export default function ResponderLayout({ children }: { children: React.ReactNod
   }, [])
 
   useEffect(() => {
+    // Don't redirect until auth has finished loading from localStorage
+    if (isLoading) return
+    
     if (user === null) {
-      router.push("/login")
+      router.push("/responder-login")
     } else if (user && (!user.role || user.role === "citizen")) {
       router.push("/")
     }
-  }, [user, router])
+  }, [user, isLoading, router])
 
-  if (user === undefined) {
+  // Show loading while auth is hydrating or user query is in-flight
+  if (isLoading || user === undefined) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0d1424]">
         <Radio className="size-8 animate-pulse text-primary" />
