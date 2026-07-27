@@ -19,13 +19,15 @@ export function ProtectedRoute({ children, allowedRoles, fallbackUrl = "/login" 
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      router.push(fallbackUrl);
+      router.replace(fallbackUrl);
     } else if (!authLoading && isAuthenticated && user !== undefined) {
-      if (allowedRoles && user && !allowedRoles.includes(user.role || "citizen")) {
-        // Redirect to their default dashboard if they don't have access
-        if (user.role === "responder") router.push("/responder");
-        else if (user.role === "citizen") router.push("/dashboard");
-        else router.push("/");
+      if (allowedRoles) {
+        if (!user || !allowedRoles.includes(user.role || "citizen")) {
+          // Redirect to their default dashboard if they don't have access
+          if (user?.role === "responder") router.replace("/responder");
+          else if (user?.role === "citizen") router.replace("/dashboard");
+          else router.replace("/");
+        }
       }
     }
   }, [authLoading, isAuthenticated, user, router, allowedRoles, fallbackUrl]);
@@ -38,7 +40,7 @@ export function ProtectedRoute({ children, allowedRoles, fallbackUrl = "/login" 
     );
   }
 
-  if (!isAuthenticated || (allowedRoles && user && !allowedRoles.includes(user.role || "citizen"))) {
+  if (!isAuthenticated || (allowedRoles && (!user || !allowedRoles.includes(user.role || "citizen")))) {
     return null;
   }
 

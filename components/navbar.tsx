@@ -79,7 +79,11 @@ export function Navbar() {
     if (isLoading || (isAuthenticated && user === undefined)) {
       return { label: "Loading...", icon: UserRound, color: "text-slate-400", bg: "bg-slate-800" };
     }
-    if (!user) return null;
+    if (!isAuthenticated) return null;
+    
+    if (!user) {
+      return { label: "Account", icon: UserRound, color: "text-slate-400", bg: "bg-slate-800" };
+    }
     switch (user.role) {
       case "police": return { label: "Police Officer", icon: ShieldCheck, color: "text-blue-500", bg: "bg-blue-500/10" };
       case "fire": return { label: "Fire Service", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" };

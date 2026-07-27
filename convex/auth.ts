@@ -8,7 +8,7 @@ export const { auth, signIn, signOut, store } = convexAuth({
         return {
           email: params.email as string,
           name: params.name as string,
-          role: (params.role as string) || "citizen",
+          role: "citizen",
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };

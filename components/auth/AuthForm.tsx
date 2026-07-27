@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import { useConvex } from "convex/react";
+import { api } from "@/convex/_generated/api";
 
 type AuthFlow = "login" | "register" | "responder-login" | "admin-login";
 
@@ -23,9 +25,9 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  
-  const { signIn } = useAuthActions();
+  const { signIn, signOut } = useAuthActions();
   const router = useRouter();
+  const convex = useConvex();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,11 +38,25 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
     try {
       if (isRegister) {
         await signIn("password", { name, email, password, flow: "signUp", role });
+        router.push(redirectUrl);
       } else {
         await signIn("password", { email, password, flow: "signIn" });
+        const user = await convex.query(api.users.current);
+        if (user) {
+          const userRole = user.role || "citizen";
+          const isAuthorized = 
+            (flow === "responder-login" && userRole !== "citizen") ||
+            (flow === "admin-login" && userRole === "admin") ||
+            (flow === "login" && userRole === "citizen");
+            
+          if (!isAuthorized) {
+            // Sign out the unauthorized user
+            await signOut();
+            throw new Error(`Account not authorized for ${flow.replace("-", " ")}`);
+          }
+        }
+        router.push(redirectUrl);
       }
-      
-      router.push(redirectUrl);
     } catch (error) {
       console.error("Auth error:", error);
       const errorMessage = error instanceof Error ? error.message : "An unknown error occurred.";
@@ -157,17 +173,19 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
           </div>
         </form>
 
-        <div className="text-center text-sm">
-          <span className="text-muted-foreground">
-            {isRegister ? "Already have an account?" : "Don't have an account?"}
-          </span>{" "}
-          <button
-            onClick={() => router.push(isRegister ? (flow === "responder-login" ? "/responder-login" : "/login") : "/register")}
-            className="font-medium text-primary hover:text-primary/80 transition-colors"
-          >
-            {isRegister ? "Sign in" : "Register"}
-          </button>
-        </div>
+        {flow !== "responder-login" && (
+          <div className="text-center text-sm">
+            <span className="text-muted-foreground">
+              {isRegister ? "Already have an account?" : "Don't have an account?"}
+            </span>{" "}
+            <button
+              onClick={() => router.push(isRegister ? "/login" : "/register")}
+              className="font-medium text-primary hover:text-primary/80 transition-colors"
+            >
+              {isRegister ? "Sign in" : "Register"}
+            </button>
+          </div>
+        )}
       </motion.div>
     </div>
   );

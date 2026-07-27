@@ -52,8 +52,10 @@ export default function ResponderLayout({ children }: { children: React.ReactNod
     accent: "#ffffff",
   };
 
+  const allowedRoles = ["admin", ...AGENCIES.map(a => a.id)];
+
   return (
-    <ProtectedRoute allowedRoles={["responder", "admin"]} fallbackUrl="/responder-login">
+    <ProtectedRoute allowedRoles={allowedRoles} fallbackUrl="/responder-login">
       <div className="flex h-screen w-full overflow-hidden bg-[#0a0f1c] text-slate-200">
         {/* Sidebar */}
         <aside className="flex w-64 flex-col border-r border-slate-800 bg-[#0d1424]">

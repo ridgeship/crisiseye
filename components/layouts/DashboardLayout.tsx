@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { useRouter, usePathname } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
@@ -62,11 +63,11 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
       </AnimatePresence>
 
       {/* Sidebar */}
-      <motion.aside
-        initial={false}
-        animate={{ x: sidebarOpen ? 0 : "-100%" }}
-        className="fixed inset-y-0 left-0 z-50 w-64 border-r border-border/50 bg-card/50 backdrop-blur-xl lg:static lg:block lg:translate-x-0"
-        transition={{ type: "spring", bounce: 0, duration: 0.3 }}
+      <aside
+        className={cn(
+          "fixed inset-y-0 left-0 z-50 w-64 border-r border-border/50 bg-card/50 backdrop-blur-xl transition-transform duration-300 ease-in-out lg:static lg:block lg:translate-x-0",
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        )}
       >
         <div className="flex h-16 items-center justify-between px-6 border-b border-border/50">
           <Link href="/" className="flex items-center gap-2">

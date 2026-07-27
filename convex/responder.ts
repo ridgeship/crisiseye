@@ -39,9 +39,9 @@ export const getLiveQueue = query({
 });
 
 export const getStats = query({
-  args: { mockUserId: v.optional(v.id("users")) },
+  args: {},
   handler: async (ctx, args) => {
-    const user = await requireResponder(ctx, args.mockUserId);
+    const user = await requireResponder(ctx);
     const incidents = await ctx.db.query("incidents").collect();
     
     const relevant = user.role === "admin" 

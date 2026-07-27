@@ -15,7 +15,7 @@ import {
 
 export default function ResponderOverview() {
   const user = useQuery(api.users.current);
-  const stats = useQuery(api.responder.getStats, user ? { mockUserId: user._id } : "skip");
+  const stats = useQuery(api.responder.getStats);
 
   return (
     <div className="space-y-6">
