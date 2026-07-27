@@ -28,7 +28,8 @@ export function Navbar() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   
-  const { isAuthenticated, isLoading } = useConvexAuth();
+  const auth = useConvexAuth() || { isAuthenticated: false, isLoading: false };
+  const { isAuthenticated, isLoading } = auth;
   const user = useQuery(api.users.current);
   const { signOut } = useAuthActions();
 

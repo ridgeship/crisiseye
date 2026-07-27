@@ -13,7 +13,8 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ children, allowedRoles, fallbackUrl = "/login" }: ProtectedRouteProps) {
-  const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
+  const auth = useConvexAuth() || { isAuthenticated: false, isLoading: true };
+  const { isAuthenticated, isLoading: authLoading } = auth;
   const user = useQuery(api.users.current);
   const router = useRouter();
 

@@ -5,11 +5,9 @@ import { useQuery, useMutation } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { cn } from "@/lib/utils"
 import { Search, MapPin, Clock, CheckCircle2, AlertTriangle, Crosshair, Phone, MoreHorizontal, Check, ShieldAlert } from "lucide-react"
-import { useMockAuth } from "@/hooks/useMockAuth"
-
 export default function LiveQueue() {
-  const { user } = useMockAuth()
-  const incidents = useQuery(api.responder.getLiveQueue, user ? { mockUserId: user._id } : "skip")
+  const user = useQuery(api.users.current)
+  const incidents = useQuery(api.responder.getLiveQueue)
   const updateStatus = useMutation(api.responder.updateIncidentStatus)
   const assignUnit = useMutation(api.responder.assignUnit)
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -227,7 +225,7 @@ export default function LiveQueue() {
                   <button 
                     onClick={() => {
                         if (user) {
-                          void assignUnit({ id: selectedIncident._id, unitName: "Unit Alpha-1", mockUserId: user._id })
+                          void assignUnit({ id: selectedIncident._id, unitName: "Unit Alpha-1" })
                         }
                       }}
                     className="flex items-center justify-center gap-2 rounded-md border border-blue-500/30 bg-blue-500/10 py-2.5 text-sm font-semibold text-blue-400 transition-colors hover:bg-blue-500/20"
@@ -238,7 +236,7 @@ export default function LiveQueue() {
                   <button 
                     onClick={() => {
                         if (user) {
-                          void updateStatus({ id: selectedIncident._id, status: "Responding", note: "Unit dispatched", mockUserId: user._id })
+                          void updateStatus({ id: selectedIncident._id, status: "Responding", note: "Unit dispatched" })
                         }
                       }}
                     className="flex items-center justify-center gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 py-2.5 text-sm font-semibold text-orange-400 transition-colors hover:bg-orange-500/20"
@@ -249,7 +247,7 @@ export default function LiveQueue() {
                   <button 
                     onClick={() => {
                         if (user) {
-                          void updateStatus({ id: selectedIncident._id, status: "Resolved", note: "Incident marked as resolved", mockUserId: user._id })
+                          void updateStatus({ id: selectedIncident._id, status: "Resolved", note: "Incident marked as resolved" })
                         }
                       }}
                     className="col-span-2 flex items-center justify-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/20"

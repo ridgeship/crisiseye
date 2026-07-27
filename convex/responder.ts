@@ -21,9 +21,9 @@ const requireResponder = async (ctx: any, mockUserId?: any) => {
 };
 
 export const getLiveQueue = query({
-  args: { mockUserId: v.optional(v.id("users")) },
+  args: {},
   handler: async (ctx, args) => {
-    const user = await requireResponder(ctx, args.mockUserId);
+    const user = await requireResponder(ctx);
     
     // Admin sees all, otherwise filter by assigned agency matching their role
     // For now, if role is police, show police incidents + unassigned ones maybe?
@@ -67,10 +67,9 @@ export const updateIncidentStatus = mutation({
     id: v.id("incidents"),
     status: v.string(), // "Responding", "Resolved", etc
     note: v.string(),
-    mockUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const user = await requireResponder(ctx, args.mockUserId);
+    const user = await requireResponder(ctx);
     const incident = await ctx.db.get(args.id);
     if (!incident) throw new Error("Incident not found");
 
@@ -94,10 +93,9 @@ export const assignUnit = mutation({
   args: {
     id: v.id("incidents"),
     unitName: v.string(),
-    mockUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
-    const user = await requireResponder(ctx, args.mockUserId);
+    const user = await requireResponder(ctx);
     const incident = await ctx.db.get(args.id);
     if (!incident) throw new Error("Incident not found");
 

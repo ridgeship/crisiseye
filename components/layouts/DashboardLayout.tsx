@@ -92,7 +92,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
             );
           })}
         </nav>
-      </motion.aside>
+      </aside>
 
       {/* Main Content */}
       <div className="flex flex-1 flex-col overflow-hidden">
