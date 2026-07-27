@@ -1,7 +1,7 @@
 "use client"
 
-import { useQuery } from "convex/react"
-import { api } from "@/convex/_generated/api"
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { 
   AlertTriangle, 
   Activity, 
@@ -11,12 +11,11 @@ import {
   Flame, 
   Wind,
   ShieldCheck
-} from "lucide-react"
-import { useMockAuth } from "@/hooks/useMockAuth"
+} from "lucide-react";
 
 export default function ResponderOverview() {
-  const { user } = useMockAuth()
-  const stats = useQuery(api.responder.getStats, user ? { mockUserId: user._id } : "skip")
+  const user = useQuery(api.users.current);
+  const stats = useQuery(api.responder.getStats, user ? { mockUserId: user._id } : "skip");
 
   return (
     <div className="space-y-6">
