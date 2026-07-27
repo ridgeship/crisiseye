@@ -130,6 +130,15 @@ export const AGENCIES: Agency[] = [
     icon: CloudLightning,
     accent: '#eab308',
   },
+  {
+    id: 'gwa',
+    name: 'Ghana Water Company',
+    short: 'GWC',
+    phone: '0302-221824',
+    logo: '/agency-gwa.png',
+    icon: Waves,
+    accent: '#3aa0ff',
+  },
 ]
 
 // Sample active incidents across Ghana (used by map, dashboard, responder view).
