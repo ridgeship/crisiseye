@@ -44,6 +44,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { CATEGORY_META, SEVERITY_META, AGENCIES, type IncidentCategory, type Severity } from "@/lib/data";
+import { APIProvider, Map, AdvancedMarker } from "@vis.gl/react-google-maps";
+
 
 const ROLE_PRIORITIES: Record<string, string[]> = {
   police: ["Crime / Security", "Road Accident"],
@@ -60,6 +62,9 @@ export default function EmergencyOperationsCentre() {
   const assignUnit = useMutation(api.responder.assignUnit);
   const addNote = useMutation(api.responder.addIncidentNote);
   const publishIncident = useMutation(api.responder.publishIncident);
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
+  const isKeyConfigured = apiKey && apiKey !== "your_google_maps_api_key_here" && apiKey.trim() !== "";
+
 
   // States
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -639,64 +644,158 @@ export default function EmergencyOperationsCentre() {
           </div>
 
           {/* Panel 3: AI Operational Intelligence (Right Panel) */}
-          <div className="w-80 shrink-0 flex flex-col overflow-hidden rounded-lg border border-slate-800 bg-[#0b0f19] p-5 shadow-md space-y-5">
-            <div className="border-b border-slate-800 pb-3 flex items-center gap-2">
-              <Zap className="size-4 text-amber-500" />
-              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">AI Operational Intel</h2>
-            </div>
-
-            {/* Intel Summary */}
-            <div className="space-y-1.5">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Automated Summary</p>
-              <div className="rounded bg-slate-950/85 p-3 text-xs leading-relaxed text-slate-300 border border-slate-900/80">
-                Large language system detected high relevance associated with {selectedIncident.incidentType}. Recommend immediate response coordinate mapping.
+          <div className="w-80 shrink-0 flex flex-col overflow-hidden rounded-lg border border-slate-800 bg-[#0b0f19] shadow-md">
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto p-5 space-y-5">
+              <div className="border-b border-slate-800 pb-3 flex items-center gap-2">
+                <Zap className="size-4 text-amber-500" />
+                <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300">AI Operational Intel</h2>
+                {selectedIncident.aiManualReview && (
+                  <span className="ml-auto rounded bg-orange-500/15 px-1.5 py-0.5 text-[9px] font-bold uppercase text-orange-400 border border-orange-500/20">
+                    Manual Review
+                  </span>
+                )}
               </div>
-            </div>
 
-            {/* AI Indicators */}
-            <div className="grid grid-cols-2 gap-3 text-xs">
-              <div className="bg-slate-950/50 p-2.5 rounded border border-slate-900">
-                <p className="text-slate-500 text-[10px] uppercase font-bold">Confidence</p>
-                <p className="text-lg font-bold text-white mt-0.5">{selectedIncident.aiConfidence ?? 0}%</p>
-              </div>
-              <div className="bg-slate-950/50 p-2.5 rounded border border-slate-900">
-                <p className="text-slate-500 text-[10px] uppercase font-bold">Priority Rating</p>
-                <p className="text-lg font-bold text-red-400 mt-0.5 uppercase">{selectedIncident.severity}</p>
-              </div>
-            </div>
-
-            {/* Suggestions */}
-            <div className="space-y-3">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dispatch Suggestions</p>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between bg-slate-950/80 p-2 rounded">
-                  <span className="text-slate-300 font-medium">Primary Agency</span>
-                  <span className="text-slate-400 font-semibold uppercase">{selectedIncident.assignedAgency || "Unassigned"}</span>
-                </div>
-                <div className="flex items-center justify-between bg-slate-950/80 p-2 rounded">
-                  <span className="text-slate-300 font-medium">Coordination Status</span>
-                  <span className="text-slate-400 font-semibold">{selectedIncident.status}</span>
+              {/* AI Summary */}
+              <div className="space-y-1.5">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Automated Summary</p>
+                <div className="rounded bg-slate-950/85 p-3 text-xs leading-relaxed text-slate-300 border border-slate-900/80">
+                  {selectedIncident.aiSummary || `AI detected high relevance for ${selectedIncident.incidentType}. Recommend immediate response.`}
                 </div>
               </div>
-            </div>
 
-            {/* Media validation check */}
-            <div className="space-y-2">
-              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Integrity check</p>
-              <div className="flex items-center gap-2 rounded bg-slate-950/80 p-3 text-xs">
-                <ShieldCheck className="size-4 text-emerald-500" />
-                <div>
-                  <p className="font-semibold text-slate-200">Verification Result</p>
-                  <p className="text-[10px] text-slate-500">{selectedIncident.verificationResult || "Pending Dispatch Review"}</p>
+              {/* AI Indicators */}
+              <div className="grid grid-cols-2 gap-3 text-xs">
+                <div className="bg-slate-950/50 p-2.5 rounded border border-slate-900">
+                  <p className="text-slate-500 text-[10px] uppercase font-bold">Confidence</p>
+                  <p className={`text-lg font-bold mt-0.5 ${
+                    (selectedIncident.aiConfidence ?? 0) >= 70 ? 'text-emerald-400' :
+                    (selectedIncident.aiConfidence ?? 0) >= 40 ? 'text-orange-400' : 'text-slate-400'
+                  }`}>
+                    {selectedIncident.aiConfidence !== undefined && selectedIncident.aiConfidence !== null
+                      ? `${selectedIncident.aiConfidence}%`
+                      : 'N/A'}
+                  </p>
+                </div>
+                <div className="bg-slate-950/50 p-2.5 rounded border border-slate-900">
+                  <p className="text-slate-500 text-[10px] uppercase font-bold">Severity</p>
+                  <p className="text-lg font-bold text-red-400 mt-0.5 uppercase">{selectedIncident.severity}</p>
                 </div>
               </div>
-            </div>
 
-            {/* Actions Guide */}
-            <div className="rounded bg-slate-900/30 border border-slate-800/80 p-3 text-[11px] text-slate-400 leading-relaxed">
-              Responders can mark incident states as accepted or complete. When resolved, and if citizen grants consent, click <strong className="text-slate-300">Publish Alert</strong> to sync coordinates with citizen map indexes.
+              {/* AI Detected Labels */}
+              {selectedIncident.aiLabels && selectedIncident.aiLabels.length > 0 && (
+                <div className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Detected Scene Elements</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedIncident.aiLabels.map((label: string, i: number) => (
+                      <span key={i} className="rounded-full bg-primary/10 border border-primary/20 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
+                        {label}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Suggestions */}
+              <div className="space-y-3">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Dispatch Suggestions</p>
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center justify-between bg-slate-950/80 p-2 rounded">
+                    <span className="text-slate-300 font-medium">Primary Agency</span>
+                    <span className="text-slate-400 font-semibold uppercase">{selectedIncident.assignedAgency || "Unassigned"}</span>
+                  </div>
+                  <div className="flex items-center justify-between bg-slate-950/80 p-2 rounded">
+                    <span className="text-slate-300 font-medium">Status</span>
+                    <span className="text-slate-400 font-semibold">{selectedIncident.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Spam / Override flag */}
+              {selectedIncident.aiSpamOrMeme && (
+                <div className="rounded bg-red-950/30 border border-red-800/40 p-3 text-xs text-red-400 flex items-center gap-2">
+                  <AlertOctagon className="size-4 shrink-0" />
+                  <div>
+                    <p className="font-bold">Spam / Meme Flagged</p>
+                    <p className="text-[10px] opacity-80 mt-0.5">Citizen submitted this with a manual override request.</p>
+                  </div>
+                </div>
+              )}
+
+              {/* Integrity check */}
+              <div className="space-y-2">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Integrity Check</p>
+                <div className="flex items-center gap-2 rounded bg-slate-950/80 p-3 text-xs">
+                  <ShieldCheck className={`size-4 ${selectedIncident.aiManualReview ? 'text-orange-400' : 'text-emerald-500'}`} />
+                  <div>
+                    <p className="font-semibold text-slate-200">Verification Result</p>
+                    <p className="text-[10px] text-slate-500">
+                      {selectedIncident.aiManualReview
+                        ? (selectedIncident.aiManualReviewReason || "Awaiting manual review")
+                        : (selectedIncident.verificationResult || "AI Verified — No Issues Detected")}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Incident Replay */}
+              <div className="space-y-2 pt-3 border-t border-slate-800">
+                <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
+                  <History className="size-3" /> Incident Replay
+                </p>
+                <div className="space-y-0">
+                  {(() => {
+                    const LIFECYCLE = ["RECEIVED", "AI_REVIEW", "PENDING_REVIEW", "ACCEPTED", "ASSIGNED", "EN_ROUTE", "ON_SCENE", "RESOLVED", "PUBLISHED"];
+                    const history = selectedIncident.statusHistory ?? [];
+                    const historyStatuses = history.map((h: any) => h.status);
+                    const currentIdx = LIFECYCLE.indexOf(selectedIncident.status);
+                    
+                    return LIFECYCLE.map((step, idx) => {
+                      const histEntry = history.find((h: any) => h.status === step);
+                      const isCompleted = historyStatuses.includes(step);
+                      const isCurrent = selectedIncident.status === step;
+                      const isPending = idx > currentIdx;
+
+                      return (
+                        <div key={step} className="flex items-start gap-2.5">
+                          <div className="flex flex-col items-center">
+                            <div className={`mt-1 size-2.5 rounded-full flex-shrink-0 ${
+                              isCurrent ? 'bg-primary ring-4 ring-primary/20' :
+                              isCompleted ? 'bg-emerald-500' :
+                              'bg-slate-800 border border-slate-700'
+                            }`} />
+                            {idx < LIFECYCLE.length - 1 && (
+                              <div className={`w-px flex-1 my-0.5 ${isCompleted ? 'bg-emerald-500/40' : 'bg-slate-800'}`} style={{ height: '16px' }} />
+                            )}
+                          </div>
+                          <div className="pb-2 min-w-0">
+                            <p className={`text-[10px] font-bold ${
+                              isCurrent ? 'text-primary' :
+                              isCompleted ? 'text-slate-300' :
+                              'text-slate-600'
+                            }`}>{step}</p>
+                            {histEntry && (
+                              <p className="text-[9px] text-slate-500 font-mono mt-0.5">
+                                {new Date(histEntry.timestamp).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </div>
+
+              {/* Actions Guide */}
+              <div className="rounded bg-slate-900/30 border border-slate-800/80 p-3 text-[11px] text-slate-400 leading-relaxed">
+                When resolved, click <strong className="text-slate-300">Publish Alert</strong> to sync with citizen map indexes (requires citizen consent).
+              </div>
             </div>
           </div>
+
         </div>
       ) : (
         <div className="flex flex-1 flex-col items-center justify-center rounded-lg border border-slate-800 bg-[#0b0f19] p-8 text-center shadow-md">
@@ -858,13 +957,21 @@ export default function EmergencyOperationsCentre() {
                     <option value="RESTRICTED">RESTRICTED (Visible internally / specific agencies only)</option>
                   </select>
                 </div>
+
+                <button
+                  type="button"
+                  onClick={() => setPubPreviewMode(true)}
+                  className="w-full rounded bg-primary py-2 text-xs font-semibold text-white hover:bg-primary/95 mt-4 cursor-pointer"
+                >
+                  Preview Before Publish
+                </button>
               </div>
             ) : (
               /* LIVE CITIZEN PREVIEW CARD */
               <div className="space-y-4">
                 <div className="rounded border border-amber-500/20 bg-amber-500/5 p-3 text-[11px] text-slate-400 flex items-center gap-2">
                   <Info className="size-4 text-amber-500 shrink-0" />
-                  <span>Reporter name, phone numbers, exact coordinates, and internal responder notes are completely hidden.</span>
+                  <span>Reporter identity, phone, email, exact GPS, private media, responder notes, and AI analysis are strictly hidden.</span>
                 </div>
 
                 <div className="rounded-xl border border-slate-800 bg-[#0d1424] p-5 space-y-4 text-left">
@@ -883,13 +990,44 @@ export default function EmergencyOperationsCentre() {
                     <MapPin className="size-3.5 text-red-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="font-semibold text-slate-350">{pubLocation || "No Location Specified"}</p>
-                      <p className="text-slate-500 text-[10px]">Exact address coordinates automatically removed.</p>
+                      <p className="text-slate-500 text-[10px]">Generalized location (coordinates rounded to 3 decimal places).</p>
                     </div>
                   </div>
 
                   <p className="text-xs text-slate-350 leading-relaxed whitespace-pre-wrap">{pubSummary || "No public summary provided."}</p>
 
-                  {/* Public Media Gallery mock */}
+                  {/* Public Map Marker Preview */}
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Public Map Marker</p>
+                    <div className="h-44 rounded-lg overflow-hidden border border-slate-800 bg-slate-950 relative flex items-center justify-center">
+                      {isKeyConfigured ? (
+                        <APIProvider apiKey={apiKey}>
+                          <Map
+                            defaultCenter={{ 
+                              lat: Math.round(selectedIncident.location.lat * 1000) / 1000, 
+                              lng: Math.round(selectedIncident.location.lng * 1000) / 1000 
+                            }}
+                            defaultZoom={13}
+                            gestureHandling={'cooperative'}
+                            disableDefaultUI={true}
+                          >
+                            <AdvancedMarker 
+                              position={{ 
+                                lat: Math.round(selectedIncident.location.lat * 1000) / 1000, 
+                                lng: Math.round(selectedIncident.location.lng * 1000) / 1000 
+                              }}
+                            />
+                          </Map>
+                        </APIProvider>
+                      ) : (
+                        <div className="text-center p-3 text-[10px] text-slate-500">
+                          Google Maps API key missing. Public marker preview is unavailable.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Public Media Gallery */}
                   {pubMedia.length > 0 && (
                     <div className="space-y-1.5">
                       <p className="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Public media gallery ({pubMedia.length})</p>
@@ -913,25 +1051,54 @@ export default function EmergencyOperationsCentre() {
             )}
           </div>
 
-          <DialogFooter className="mt-6 border-t border-slate-850 pt-4">
-            <button
-              disabled={pubLoading}
-              onClick={() => setIsPublishModalOpen(false)}
-              className="rounded bg-slate-900 border border-slate-850 px-3.5 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-850 disabled:opacity-50"
-            >
-              Cancel
-            </button>
-            <button
-              disabled={pubLoading || !pubTitle.trim() || !pubSummary.trim() || !pubLocation.trim()}
-              onClick={handlePublishIncident}
-              className="rounded bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5"
-            >
-              {pubLoading && <Loader2 className="size-3 animate-spin" />}
-              Publish Article
-            </button>
+          <DialogFooter className="mt-6 border-t border-slate-850 pt-4 flex flex-col sm:flex-row gap-2 justify-between w-full">
+            <div className="flex gap-2">
+              <button
+                disabled={pubLoading}
+                onClick={() => setPubPreviewMode(!pubPreviewMode)}
+                className="rounded bg-slate-900 border border-slate-850 px-3.5 py-2 text-xs font-semibold text-slate-450 hover:bg-slate-850 disabled:opacity-50 cursor-pointer"
+              >
+                {pubPreviewMode ? "Edit Details" : "Preview Mode"}
+              </button>
+              <button
+                disabled={pubLoading}
+                onClick={async () => {
+                  setPubLoading(true);
+                  try {
+                    await updateStatus({ id: selectedIncident._id, status: "ARCHIVED", note: "Case archived from publication dashboard." });
+                    setIsPublishModalOpen(false);
+                  } catch (err) {
+                    alert("Failed to archive case.");
+                  } finally {
+                    setPubLoading(false);
+                  }
+                }}
+                className="rounded bg-slate-950 border border-red-950 text-red-500/90 px-3.5 py-2 text-xs font-semibold hover:bg-red-950/20 cursor-pointer"
+              >
+                Archive Incident
+              </button>
+            </div>
+            <div className="flex gap-2">
+              <button
+                disabled={pubLoading}
+                onClick={() => setIsPublishModalOpen(false)}
+                className="rounded bg-slate-900 border border-slate-850 px-3.5 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-850 disabled:opacity-50 cursor-pointer"
+              >
+                Return
+              </button>
+              <button
+                disabled={pubLoading || !pubTitle.trim() || !pubSummary.trim() || !pubLocation.trim()}
+                onClick={handlePublishIncident}
+                className="rounded bg-primary px-4 py-2 text-xs font-semibold text-white hover:bg-primary/90 disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
+              >
+                {pubLoading && <Loader2 className="size-3 animate-spin" />}
+                Publish Alert
+              </button>
+            </div>
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
     </div>
   );
 }

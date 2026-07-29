@@ -64,6 +64,13 @@ export const reportIncident = mutation({
     media: v.optional(v.array(v.string())),
     voiceNote: v.optional(v.string()),
     privacyPreference: v.union(v.literal("private"), v.literal("allow_publication")),
+    // AI Verification metadata (populated after client-side image check)
+    aiConfidence: v.optional(v.number()),
+    aiSummary: v.optional(v.string()),
+    aiLabels: v.optional(v.array(v.string())),
+    aiManualReview: v.optional(v.boolean()),
+    aiManualReviewReason: v.optional(v.string()),
+    aiSpamOrMeme: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const userId = await auth.getUserId(ctx);

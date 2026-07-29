@@ -19,7 +19,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { CATEGORY_META, SEVERITY_META, type IncidentCategory, type Severity } from '@/lib/data'
-import { useMutation, useAction } from "convex/react"
+import { useMutation } from "convex/react"
 // @ts-ignore
 import { api } from "@/convex/_generated/api"
 
@@ -133,6 +133,11 @@ export function ReportForm() {
   const [mediaStatus, setMediaStatus] = useState<string | null>(null)
   const [aiSummary, setAiSummary] = useState<string | null>(null)
   const [evidenceConfidence, setEvidenceConfidence] = useState<string | null>(null)
+  const [aiLabels, setAiLabels] = useState<string[]>([])
+  const [aiConfidence, setAiConfidence] = useState<number | null>(null)
+  const [aiManualReview, setAiManualReview] = useState<boolean>(false)
+  const [aiSpamOrMeme, setAiSpamOrMeme] = useState<boolean>(false)
+  const [aiOverrideRequested, setAiOverrideRequested] = useState<boolean>(false)
   const [voiceBlob, setVoiceBlob] = useState<Blob | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [submitted, setSubmitted] = useState(false)
@@ -147,8 +152,6 @@ export function ReportForm() {
   
   // @ts-ignore
   const reportIncident = useMutation(api.incidents.reportIncident);
-  // @ts-ignore
-  const analyzeMediaAction = useAction(api.vision.analyzeMedia);
 
   const useCurrentLocation = () => {
     setLocation((l) => ({ ...l, mode: 'auto', status: 'locating' }))
@@ -178,49 +181,71 @@ export function ReportForm() {
       return;
     }
 
-    const newFiles = Array.from(list).slice(0, 5);
+    const newFiles = Array.from(list).filter(f => f.type.startsWith('image/')).slice(0, 5);
+    if (newFiles.length === 0) {
+      setFiles(prev => [...prev, ...Array.from(list)].slice(0, 5));
+      return;
+    }
     
     setAnalyzingMedia(true);
     setMediaStatus(null);
     setAiSummary(null);
     setEvidenceConfidence(null);
+    setAiLabels([]);
+    setAiConfidence(null);
+    setAiManualReview(false);
+    setAiSpamOrMeme(false);
+    setAiOverrideRequested(false);
 
     try {
-      // Convert to base64 Data URIs
-      const toBase64 = (f: File): Promise<string> => new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(f);
-        reader.onload = () => resolve(reader.result as string);
-        reader.onerror = err => reject(err);
-      });
-      // We process the first file for relevance to save time and API costs
-      const base64DataUri = await toBase64(newFiles[0]);
+      // Send the first image to our secure server-side API route
+      const formData = new FormData();
+      formData.append('image', newFiles[0]);
 
-      const parsed = await analyzeMediaAction({
-        categoryLabel: CATEGORY_META[category].label,
-        base64DataUri: base64DataUri,
+      const response = await fetch('/api/verify-incident', {
+        method: 'POST',
+        body: formData,
       });
 
-      if (parsed.status === "Irrelevant") {
+      if (!response.ok) {
+        throw new Error('Verification API returned an error');
+      }
+
+      const result = await response.json();
+
+      // Store AI metadata for submission
+      const confidence = Math.round((result.confidenceScore ?? 0) * 100);
+      setAiConfidence(confidence);
+      setAiLabels(result.detectedLabels ?? []);
+      setAiManualReview(!!result.requiresManualReview);
+      setAiSpamOrMeme(!!result.isMemeOrSpam);
+
+      if (result.isMemeOrSpam || !result.isEmergencyRelated) {
+        // Rejected - do NOT add to files, show rejection with override option
         setMediaStatus("Rejected");
-        setAiSummary(parsed.explanation);
+        setAiSummary(result.rejectionReason || "Content does not appear to show a valid emergency.");
         setEvidenceConfidence("Low");
-        alert("Image is irrelevant. Please upload a real image related to the emergency.");
-        // Do NOT add newFiles to state
       } else {
         setFiles(prev => [...prev, ...newFiles].slice(0, 5));
-        setMediaStatus(parsed.status);
-        setAiSummary(parsed.explanation);
-        setEvidenceConfidence(parsed.status === "Relevant" ? "High" : "Low");
+        if (result.requiresManualReview) {
+          setMediaStatus("Needs Manual Review");
+          setAiSummary(result.rejectionReason || "Image flagged for manual review by a responder.");
+          setEvidenceConfidence("Low");
+        } else {
+          setMediaStatus("Relevant");
+          setAiSummary(`AI verified. Confidence: ${confidence}%. Detected: ${(result.detectedLabels ?? []).join(', ')}`);
+          setEvidenceConfidence("High");
+        }
       }
 
     } catch (err) {
       console.error("Vision API Error:", err);
-      // Fallback
+      // Graceful fallback - allow submission with manual review flag
       setFiles(prev => [...prev, ...newFiles].slice(0, 5));
       setMediaStatus("Needs Manual Review");
-      setAiSummary("Automatic media analysis is temporarily unavailable.");
+      setAiSummary("Automatic media analysis is temporarily unavailable. A responder will review it.");
       setEvidenceConfidence("Low");
+      setAiManualReview(true);
     } finally {
       setAnalyzingMedia(false);
     }
@@ -238,8 +263,6 @@ export function ReportForm() {
     setSubmitting(true)
     
     try {
-      // In a real scenario, files and voiceBlob would be uploaded to Convex Storage first
-      // For this demo, we'll assume they are handled or just pass empty for media URLs if not fully implemented.
       const id = await reportIncident({
         incidentType: CATEGORY_META[category!].label,
         description: description,
@@ -249,10 +272,16 @@ export function ReportForm() {
           lng: location.lng || 0,
           address: location.address
         },
-        // mock URLs for demonstration
         media: files.map(f => f.name),
         voiceNote: voiceBlob ? "voice-report-audio" : undefined,
         privacyPreference,
+        // Include AI verification metadata if available
+        ...(aiConfidence !== null ? { aiConfidence } : {}),
+        ...(aiSummary ? { aiSummary } : {}),
+        ...(aiLabels.length > 0 ? { aiLabels } : {}),
+        ...(aiManualReview || aiOverrideRequested ? { aiManualReview: true } : {}),
+        ...(aiOverrideRequested ? { aiManualReviewReason: "Citizen requested manual override after AI rejection." } : {}),
+        ...(aiSpamOrMeme && aiOverrideRequested ? { aiSpamOrMeme: true } : {}),
       });
       
       setIncidentId(id)
@@ -314,6 +343,11 @@ export function ReportForm() {
               setMediaStatus(null)
               setAiSummary(null)
               setEvidenceConfidence(null)
+              setAiLabels([])
+              setAiConfidence(null)
+              setAiManualReview(false)
+              setAiSpamOrMeme(false)
+              setAiOverrideRequested(false)
               setVoiceBlob(null)
               setLocation({ mode: 'auto', address: '', status: 'idle' })
             }}
@@ -475,13 +509,35 @@ export function ReportForm() {
           </div>
         )}
 
-        {!analyzingMedia && mediaStatus === "Rejected" && (
-          <div className="mt-4 flex items-start gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
-            <X className="size-5 shrink-0 mt-0.5" />
+        {!analyzingMedia && mediaStatus === "Rejected" && !aiOverrideRequested && (
+          <div className="mt-4 flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-4 text-destructive">
+            <div className="flex items-start gap-3">
+              <X className="size-5 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold">✖ Image rejected by AI verification.</p>
+                <p className="mt-1 text-sm opacity-90">This image does not appear to show a valid emergency.</p>
+                {aiSummary && <p className="mt-2 text-xs italic opacity-80">AI Reason: {aiSummary}</p>}
+                {aiLabels.length > 0 && (
+                  <p className="mt-1.5 text-xs opacity-70">Detected: {aiLabels.join(', ')}</p>
+                )}
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => { setAiOverrideRequested(true); setFiles(prev => prev); }}
+              className="self-start rounded-lg border border-destructive/40 bg-destructive/20 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/30 transition-colors"
+            >
+              Request Manual Override — Submit Anyway
+            </button>
+          </div>
+        )}
+
+        {!analyzingMedia && aiOverrideRequested && (
+          <div className="mt-4 flex items-start gap-3 rounded-lg border border-orange-500/20 bg-orange-500/10 p-4 text-orange-500">
+            <AlertTriangle className="size-5 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold">✖ This media does not appear to relate to the selected emergency.</p>
-              <p className="mt-1 text-sm opacity-90">Please upload original evidence from the incident.</p>
-              {aiSummary && <p className="mt-2 text-xs italic opacity-80">AI Note: {aiSummary}</p>}
+              <p className="text-sm font-semibold">⚠ Manual Override Requested</p>
+              <p className="mt-1 text-xs opacity-90">A responder will manually review your submitted media. You may proceed with your report.</p>
             </div>
           </div>
         )}
@@ -490,8 +546,17 @@ export function ReportForm() {
           <div className="mt-4 flex items-start gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/10 p-4 text-emerald-500">
             <CheckCircle2 className="size-5 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold">✔ Media appears relevant to this emergency.</p>
-              {aiSummary && <p className="mt-1 text-xs opacity-90">AI Note: {aiSummary}</p>}
+              <p className="text-sm font-semibold">✔ Media verified as emergency-related.</p>
+              {aiConfidence !== null && (
+                <p className="mt-1 text-xs opacity-90">Confidence: {aiConfidence}%</p>
+              )}
+              {aiLabels.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1">
+                  {aiLabels.map(label => (
+                    <span key={label} className="rounded-full bg-emerald-500/20 px-2 py-0.5 text-[10px] font-semibold">{label}</span>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -500,8 +565,8 @@ export function ReportForm() {
           <div className="mt-4 flex items-start gap-3 rounded-lg border border-orange-500/20 bg-orange-500/10 p-4 text-orange-500">
             <AlertTriangle className="size-5 shrink-0 mt-0.5" />
             <div>
-              <p className="text-sm font-semibold">⚠ Unable to confidently classify the media.</p>
-              <p className="mt-1 text-sm opacity-90">Responders will manually review it.</p>
+              <p className="text-sm font-semibold">⚠ Flagged for manual review.</p>
+              <p className="mt-1 text-sm opacity-90">Responders will verify this media before acting on the report.</p>
               {aiSummary && <p className="mt-2 text-xs italic opacity-80">AI Note: {aiSummary}</p>}
             </div>
           </div>

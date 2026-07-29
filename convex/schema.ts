@@ -60,6 +60,14 @@ export default defineSchema({
     
     aiConfidence: v.optional(v.number()),
     verificationResult: v.optional(v.string()),
+    aiSummary: v.optional(v.string()),
+    aiLabels: v.optional(v.array(v.string())),
+    aiSuggestedPriority: v.optional(v.string()),
+    aiSuggestedAgency: v.optional(v.array(v.string())),
+    aiRiskAssessment: v.optional(v.string()),
+    aiManualReview: v.optional(v.boolean()),
+    aiManualReviewReason: v.optional(v.string()),
+    aiSpamOrMeme: v.optional(v.boolean()),
     
     createdAt: v.number(),
     updatedAt: v.number(),

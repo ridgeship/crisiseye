@@ -30,6 +30,16 @@ export default function ResponderOverview() {
   const active = stats?.active ?? 0;
   const published = incidents?.filter(i => i.status === "PUBLISHED").length ?? 0;
 
+  // AI metrics from live incident data
+  const aiReviewed = incidents?.filter(i => i.aiConfidence !== undefined && i.aiConfidence !== null).length ?? 0;
+  const manualReviews = incidents?.filter(i => i.aiManualReview === true).length ?? 0;
+  const spamFlagged = incidents?.filter(i => i.aiSpamOrMeme === true).length ?? 0;
+  const confidenceValues = incidents?.filter(i => i.aiConfidence !== undefined && i.aiConfidence !== null).map(i => i.aiConfidence as number) ?? [];
+  const avgConfidence = confidenceValues.length > 0
+    ? Math.round(confidenceValues.reduce((a, b) => a + b, 0) / confidenceValues.length)
+    : null;
+
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-1">
@@ -96,6 +106,39 @@ export default function ResponderOverview() {
               <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Avg Response</p>
               <p className="text-2xl font-bold text-white mt-0.5">14m <span className="text-xs font-normal text-slate-500">est</span></p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* AI Telemetry Board */}
+      <div className="rounded-xl border border-amber-500/15 bg-amber-500/5 shadow-sm">
+        <div className="border-b border-amber-500/15 px-5 py-3 flex items-center gap-2">
+          <ShieldCheck className="size-4 text-amber-500" />
+          <h2 className="text-xs font-bold uppercase tracking-wider text-amber-400">AI Verification Telemetry</h2>
+          <span className="ml-auto text-[10px] text-amber-500/60 font-mono">Live · Gemini 2.5 Flash</span>
+        </div>
+        <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">AI Reviewed</p>
+            <p className="text-2xl font-bold text-white mt-1">{aiReviewed}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Images processed</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Manual Reviews</p>
+            <p className="text-2xl font-bold text-orange-400 mt-1">{manualReviews}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Awaiting responder</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Spam Flagged</p>
+            <p className="text-2xl font-bold text-red-400 mt-1">{spamFlagged}</p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Override submitted</p>
+          </div>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Avg Confidence</p>
+            <p className={`text-2xl font-bold mt-1 ${avgConfidence !== null && avgConfidence >= 70 ? 'text-emerald-400' : avgConfidence !== null ? 'text-orange-400' : 'text-slate-500'}`}>
+              {avgConfidence !== null ? `${avgConfidence}%` : '—'}
+            </p>
+            <p className="text-[10px] text-slate-500 mt-0.5">Across verified reports</p>
           </div>
         </div>
       </div>
