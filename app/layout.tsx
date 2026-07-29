@@ -31,6 +31,7 @@ import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ThemeProvider } from "@/components/theme-provider";
 import { RoleSwitcher } from "@/components/dev/role-switcher";
 import { OfflineQueueProvider } from "@/components/offline-queue-provider";
+import { ConvexAuthNextjsServerProvider } from "@convex-dev/auth/nextjs/server";
 
 export default function RootLayout({
   children,
@@ -40,22 +41,24 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
       <body className="bg-background font-sans antialiased" suppressHydrationWarning>
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="system"
-          enableSystem
-          disableTransitionOnChange
-          suppressHydrationWarning
-        >
-          <ConvexClientProvider>
-            <OfflineQueueProvider>
-              <Suspense fallback={null}>
-                <SiteChrome>{children}</SiteChrome>
-              </Suspense>
-              <RoleSwitcher />
-            </OfflineQueueProvider>
-          </ConvexClientProvider>
-        </ThemeProvider>
+        <ConvexAuthNextjsServerProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="system"
+            enableSystem
+            disableTransitionOnChange
+            suppressHydrationWarning
+          >
+            <ConvexClientProvider>
+              <OfflineQueueProvider>
+                <Suspense fallback={null}>
+                  <SiteChrome>{children}</SiteChrome>
+                </Suspense>
+                <RoleSwitcher />
+              </OfflineQueueProvider>
+            </ConvexClientProvider>
+          </ThemeProvider>
+        </ConvexAuthNextjsServerProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
