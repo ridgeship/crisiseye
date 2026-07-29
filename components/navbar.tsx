@@ -17,6 +17,7 @@ const NAV_LINKS = [
   { href: "/", label: "Home" },
   { href: "/report", label: "Report Incident" },
   { href: "/map", label: "Live Map" },
+  { href: "/discovery", label: "Discovery Feed" },
   { href: "/community-risk", label: "Community Risk (CRI)" },
   { href: "/dashboard", label: "Dashboard" },
   { href: "/about", label: "About" },

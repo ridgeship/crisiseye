@@ -57,22 +57,33 @@ export function MapView() {
   const [fullscreen, setFullscreen] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
 
-  // @ts-ignore
-  const liveIncidents = useQuery(api.incidents.getIncidents) || []
+  // Filter states
+  const [severityFilter, setSeverityFilter] = useState<string>("all")
+  const [agencyFilter, setAgencyFilter] = useState<string>("all")
+  const [typeFilter, setTypeFilter] = useState<string>("all")
+
+  const liveIncidents = useQuery(api.discovery.getPublicMapIncidents) || []
 
   const filtered = useMemo(() => {
     return liveIncidents.filter((i: any) => {
       // Find category key from label
-      const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === i.incidentType) || 'other'
+      const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === i.category || CATEGORY_META[k].label === i.title) || 'other'
       const catOk = activeCats.size === 0 || activeCats.has(catKey as IncidentCategory)
+      
       const q = query.trim().toLowerCase()
       const queryOk =
         !q ||
-        i.incidentType.toLowerCase().includes(q) ||
-        (i.location?.address || '').toLowerCase().includes(q)
-      return catOk && queryOk
+        i.title.toLowerCase().includes(q) ||
+        (i.locationName || '').toLowerCase().includes(q) ||
+        (i.summary || '').toLowerCase().includes(q)
+
+      const matchesSeverity = severityFilter === "all" || i.severity?.toLowerCase() === severityFilter.toLowerCase();
+      const matchesAgency = agencyFilter === "all" || i.agency?.toLowerCase() === agencyFilter.toLowerCase();
+      const matchesType = typeFilter === "all" || i.type === typeFilter;
+
+      return catOk && queryOk && matchesSeverity && matchesAgency && matchesType;
     })
-  }, [activeCats, query, liveIncidents])
+  }, [activeCats, query, liveIncidents, severityFilter, agencyFilter, typeFilter])
 
   const toggleCat = (cat: IncidentCategory) => {
     setActiveCats((prev) => {
@@ -102,29 +113,62 @@ export function MapView() {
       <div className="flex h-full">
         {/* Sidebar */}
         <aside className={cn(
-          "w-80 shrink-0 flex-col border-r border-border/60 bg-card/40",
+          "w-80 shrink-0 flex-col border-r border-border/60 bg-[#0d1424]/90",
           fullscreen ? "hidden" : "hidden lg:flex"
         )}>
-          <div className="border-b border-border/60 p-4">
-            <h1 className="text-lg font-semibold tracking-tight text-foreground">Live Map</h1>
-            <p className="mt-0.5 text-sm text-muted-foreground">
-              {filtered.length} active {filtered.length === 1 ? 'incident' : 'incidents'} across Ghana
+          <div className="border-b border-slate-800 p-4 space-y-3.5">
+            <h1 className="text-lg font-semibold tracking-tight text-white">Public Safety Map</h1>
+            <p className="mt-0.5 text-xs text-slate-400">
+              Displaying {filtered.length} verified public warnings & safety zones.
             </p>
-            <div className="relative mt-3">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            
+            <div className="relative mt-2">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search incidents or regions"
-                className="w-full rounded-lg border border-border/60 bg-background/60 py-2 pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground/70 focus:border-primary"
+                placeholder="Search location or title..."
+                className="w-full rounded-lg border border-slate-850 bg-slate-950 py-2 pl-9 pr-3 text-sm text-slate-200 outline-none placeholder:text-slate-500 focus:border-primary"
               />
+            </div>
+
+            {/* Advanced Filters */}
+            <div className="grid grid-cols-2 gap-2 text-xs pt-2 border-t border-slate-850">
+              <div>
+                <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Severity</label>
+                <select 
+                  value={severityFilter} 
+                  onChange={(e) => setSeverityFilter(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded p-1 text-slate-350 focus:outline-none"
+                >
+                  <option value="all">All</option>
+                  <option value="low">Low</option>
+                  <option value="moderate">Moderate</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div>
+                <label className="text-[10px] uppercase font-bold text-slate-500 block mb-1">Agency</label>
+                <select 
+                  value={agencyFilter} 
+                  onChange={(e) => setAgencyFilter(e.target.value)}
+                  className="w-full bg-slate-950 border border-slate-850 rounded p-1 text-slate-350 focus:outline-none"
+                >
+                  <option value="all">All</option>
+                  <option value="police">Police</option>
+                  <option value="fire">Fire</option>
+                  <option value="ambulance">Medical</option>
+                  <option value="nadmo">NADMO</option>
+                </select>
+              </div>
             </div>
           </div>
 
-          {/* Filters */}
-          <div className="border-b border-border/60 p-4">
-            <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Categories
+          {/* Categories select */}
+          <div className="border-b border-slate-800 p-4">
+            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+              Direct Filters
             </span>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {CATEGORY_KEYS.map((cat) => {
@@ -135,10 +179,10 @@ export function MapView() {
                     key={cat}
                     onClick={() => toggleCat(cat)}
                     className={cn(
-                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                      'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors cursor-pointer',
                       active
-                        ? 'border-transparent text-foreground'
-                        : 'border-border/60 text-muted-foreground hover:text-foreground',
+                        ? 'border-transparent text-white'
+                        : 'border-slate-800 text-slate-400 hover:text-white',
                     )}
                     style={active ? { backgroundColor: `${meta.color}22`, borderColor: meta.color } : undefined}
                   >
@@ -157,19 +201,19 @@ export function MapView() {
           <div className="flex-1 overflow-y-auto p-3">
             <ul className="space-y-2">
               {filtered.map((incident: any) => {
-                const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.incidentType) || 'other'
+                const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.category || CATEGORY_META[k].label === incident.title) || 'other'
                 const meta = CATEGORY_META[catKey as IncidentCategory]
                 const Icon = meta.icon
                 const sev = SEVERITY_META[severityFromLabel(incident.severity)]
                 return (
-                  <li key={incident._id}>
+                  <li key={incident.id}>
                     <button
-                      onClick={() => setActiveId(incident._id)}
+                      onClick={() => setActiveId(incident.id)}
                       className={cn(
-                        'w-full rounded-xl border p-3 text-left transition-colors',
-                        activeId === incident._id
-                          ? 'border-primary bg-primary/10'
-                          : 'border-border/60 bg-background/40 hover:border-border',
+                        'w-full rounded-xl border p-3.5 text-left transition-colors cursor-pointer',
+                        activeId === incident.id
+                          ? 'border-primary bg-primary/5'
+                          : 'border-slate-850 bg-slate-950/40 hover:border-slate-750',
                       )}
                     >
                       <div className="flex items-start gap-2.5">
@@ -181,19 +225,19 @@ export function MapView() {
                         </span>
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
-                            <p className="truncate text-sm font-semibold text-foreground">
-                              {incident.incidentType}
+                            <p className="truncate text-sm font-semibold text-slate-200">
+                              {incident.title}
                             </p>
-                            <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                              {timeAgo(incident.createdAt)}
+                            <span className="shrink-0 font-mono text-[9px] text-slate-500">
+                              {timeAgo(incident.publishedAt)}
                             </span>
                           </div>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {incident.location.address}
+                          <p className="truncate text-xs text-slate-400 mt-0.5">
+                            {incident.locationName}
                           </p>
                           <span
                             className={cn(
-                              'mt-1.5 inline-block rounded border px-1.5 py-0.5 text-[10px] font-medium',
+                              'mt-2 inline-block rounded border px-1.5 py-0.25 text-[9px] font-bold uppercase tracking-wider',
                               sev.className,
                             )}
                           >
@@ -206,8 +250,8 @@ export function MapView() {
                 )
               })}
               {filtered.length === 0 && (
-                <li className="py-8 text-center text-sm text-muted-foreground">
-                  No incidents match your filters.
+                <li className="py-8 text-center text-xs text-slate-500">
+                  No public alerts match the current filter matrix.
                 </li>
               )}
             </ul>
@@ -215,7 +259,7 @@ export function MapView() {
         </aside>
 
         {/* Map area */}
-        <div className="relative flex-1">
+        <div className="relative flex-1 bg-[#070b14]">
           <MapCanvas
             incidents={filtered}
             activeId={activeId}
@@ -226,12 +270,12 @@ export function MapView() {
           {/* Mobile search overlay */}
           <div className="absolute inset-x-3 top-3 z-500 lg:hidden">
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search incidents"
-                className="w-full rounded-lg border border-border/60 bg-card/90 py-2.5 pl-9 pr-3 text-sm text-foreground outline-none backdrop-blur placeholder:text-muted-foreground/70 focus:border-primary"
+                placeholder="Search safety map..."
+                className="w-full rounded-lg border border-slate-800 bg-[#0d1424]/90 py-2.5 pl-9 pr-3 text-sm text-slate-200 outline-none backdrop-blur placeholder:text-slate-500 focus:border-primary"
               />
             </div>
           </div>
@@ -241,21 +285,21 @@ export function MapView() {
             <button
               onClick={locateMe}
               aria-label="Find my location"
-              className="inline-flex size-10 items-center justify-center rounded-lg border border-border/60 bg-card/90 text-foreground backdrop-blur transition-colors hover:border-primary/50"
+              className="inline-flex size-10 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/90 text-slate-200 backdrop-blur transition-colors hover:border-primary/50"
             >
               <LocateFixed className="size-4" />
             </button>
             <button
               onClick={() => setFullscreen((v) => !v)}
               aria-label="Toggle fullscreen"
-              className="inline-flex size-10 items-center justify-center rounded-lg border border-border/60 bg-card/90 text-foreground backdrop-blur transition-colors hover:border-primary/50"
+              className="inline-flex size-10 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/90 text-slate-200 backdrop-blur transition-colors hover:border-primary/50"
             >
               {fullscreen ? <Minimize2 className="size-4" /> : <Maximize2 className="size-4" />}
             </button>
             <button
               onClick={() => setShowFilters((v) => !v)}
               aria-label="Filters"
-              className="inline-flex size-10 items-center justify-center rounded-lg border border-border/60 bg-card/90 text-foreground backdrop-blur transition-colors hover:border-primary/50 lg:hidden"
+              className="inline-flex size-10 items-center justify-center rounded-lg border border-slate-800 bg-slate-900/90 text-slate-200 backdrop-blur transition-colors hover:border-primary/50 lg:hidden"
             >
               <SlidersHorizontal className="size-4" />
             </button>
@@ -263,20 +307,20 @@ export function MapView() {
 
           {/* Legend */}
           <div className={cn(
-            "absolute bottom-3 left-3 z-500 rounded-xl border border-border/60 bg-card/90 p-3 backdrop-blur",
+            "absolute bottom-3 left-3 z-500 rounded-xl border border-slate-800 bg-slate-950/90 p-3.5 backdrop-blur",
             fullscreen ? "hidden" : "hidden sm:block"
           )}>
-            <span className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Legend
+            <span className="text-[9px] font-bold uppercase tracking-wider text-slate-500">
+              Color Index
             </span>
-            <div className="mt-1.5 grid grid-cols-2 gap-x-4 gap-y-1">
+            <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1.5">
               {CATEGORY_KEYS.map((cat) => (
                 <div key={cat} className="flex items-center gap-1.5">
                   <span
-                    className="size-2.5 rounded-full"
+                    className="size-2 rounded-full"
                     style={{ backgroundColor: CATEGORY_META[cat].color }}
                   />
-                  <span className="text-[11px] text-muted-foreground">
+                  <span className="text-[11px] text-slate-400 font-medium">
                     {CATEGORY_META[cat].label}
                   </span>
                 </div>
@@ -286,11 +330,11 @@ export function MapView() {
 
           {/* Mobile filter sheet */}
           {showFilters && (
-            <div className="absolute inset-x-3 bottom-3 z-550 rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur lg:hidden">
+            <div className="absolute inset-x-3 bottom-3 z-550 rounded-xl border border-slate-850 bg-slate-950/95 p-4 backdrop-blur lg:hidden">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-semibold text-foreground">Filter categories</span>
+                <span className="text-sm font-semibold text-white">Filter categories</span>
                 <button onClick={() => setShowFilters(false)} aria-label="Close filters">
-                  <X className="size-4 text-muted-foreground" />
+                  <X className="size-4 text-slate-455" />
                 </button>
               </div>
               <div className="mt-3 flex flex-wrap gap-1.5">
@@ -302,8 +346,8 @@ export function MapView() {
                       key={cat}
                       onClick={() => toggleCat(cat)}
                       className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
-                        active ? 'border-transparent text-foreground' : 'border-border/60 text-muted-foreground',
+                        'inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold transition-colors',
+                        active ? 'border-transparent text-white' : 'border-slate-800 text-slate-400',
                       )}
                       style={active ? { backgroundColor: `${meta.color}22`, borderColor: meta.color } : undefined}
                     >
@@ -331,60 +375,82 @@ export function MapView() {
 }
 
 function SelectedCard({ id, incidents, onClose }: { id: string; incidents: any[]; onClose: () => void }) {
-  const incident = incidents.find((i) => i._id === id)
+  const incident = incidents.find((i) => i.id === id || i._id === id)
   if (!incident) return null
-  const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
+  const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.category || CATEGORY_META[k].label === incident.title) || 'other'
   const meta = CATEGORY_META[catKey as IncidentCategory]
   const Icon = meta.icon
   const sev = SEVERITY_META[severityFromLabel(incident.severity)]
 
   return (
-    <div className="absolute bottom-3 right-3 z-550 w-[calc(100%-1.5rem)] max-w-sm rounded-xl border border-border/60 bg-card/95 p-4 backdrop-blur sm:w-80 shadow-2xl">
+    <div className="absolute bottom-3 right-3 z-550 w-[calc(100%-1.5rem)] max-w-sm rounded-xl border border-slate-800 bg-[#0d1424] p-4 text-slate-200 sm:w-80 shadow-2xl">
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span
-            className="inline-flex size-9 items-center justify-center rounded-lg"
+            className="inline-flex size-9 items-center justify-center rounded-lg shrink-0"
             style={{ backgroundColor: `${meta.color}22`, color: meta.color }}
           >
             <Icon className="size-4" />
           </span>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{incident.type}</p>
-            <p className="font-mono text-xs text-muted-foreground">{incident._id}</p>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-white truncate">{incident.title}</p>
+            <p className="font-mono text-[9px] text-slate-500 uppercase">Alert Reference</p>
           </div>
         </div>
         <button onClick={onClose} aria-label="Close">
-          <X className="size-4 text-muted-foreground" />
+          <X className="size-4 text-slate-400 hover:text-white" />
         </button>
       </div>
-      <dl className="mt-3 space-y-1.5 text-sm">
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Location</dt>
-          <dd className="text-foreground max-w-[60%] truncate text-right">{incident.location.address}</dd>
+      <dl className="mt-4 space-y-2 text-xs leading-normal">
+        <div className="flex justify-between gap-2">
+          <dt className="text-slate-500">Location</dt>
+          <dd className="text-slate-300 max-w-[60%] truncate text-right font-medium">{incident.locationName}</dd>
+        </div>
+        <div className="flex flex-col bg-slate-950 p-2.5 rounded border border-slate-850 space-y-1">
+          <dt className="text-slate-500 text-[9px] uppercase font-bold tracking-wider">Verified Advisory</dt>
+          <dd className="text-slate-350 line-clamp-3 text-[11px] leading-relaxed">{incident.summary || "No supplemental public summary logged."}</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Description</dt>
-          <dd className="text-foreground max-w-[60%] truncate text-right">{incident.description}</dd>
-        </div>
-        <div className="flex justify-between">
-          <dt className="text-muted-foreground">Severity</dt>
+          <dt className="text-slate-500">Severity</dt>
           <dd>
-            <span className={cn('rounded border px-1.5 py-0.5 text-xs font-medium', sev.className)}>
+            <span className={cn('rounded border px-1.5 py-0.25 text-[9px] font-bold uppercase tracking-wider', sev.className)}>
               {sev.label}
             </span>
           </dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Status</dt>
-          <dd className="font-mono text-green-500 font-semibold">Active</dd>
+          <dt className="text-slate-500">Agency</dt>
+          <dd className="font-semibold text-primary uppercase">{incident.agency}</dd>
         </div>
       </dl>
-      <button
-        className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/50 bg-primary/10 py-2.5 text-sm font-semibold text-primary transition-colors hover:bg-primary/20"
+      <Link
+        href={`/discovery?article=${incident.id || incident._id}`}
+        className="mt-4 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-primary/50 bg-primary/10 py-2.5 text-xs font-semibold text-primary transition-colors hover:bg-primary/20"
       >
-        <Navigation className="size-4" />
-        Dispatch Response Team
-      </button>
+        <BookOpen className="size-4" />
+        Read Full Discovery Article
+      </Link>
     </div>
   )
 }
+
+function BookOpen(props: any) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      {...props}
+    >
+      <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+      <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+    </svg>
+  )
+}
+

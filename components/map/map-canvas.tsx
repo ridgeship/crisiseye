@@ -35,17 +35,22 @@ export default function MapCanvas({ incidents, activeId, userPos, onSelect }: Ma
         >
           <MapViewportController incidents={incidents} activeId={activeId} userPos={userPos} />
           {incidents.map((incident) => {
-            const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
+            const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.category || CATEGORY_META[k].label === incident.type) || 'other'
             const meta = CATEGORY_META[catKey as IncidentCategory]
             const color = meta.color
-            const active = incident._id === activeId
+            const active = incident._id === activeId || incident.id === activeId
             const Icon = meta.icon
+
+            const lat = incident.lat !== undefined ? incident.lat : incident.location?.lat;
+            const lng = incident.lng !== undefined ? incident.lng : incident.location?.lng;
+
+            if (lat === undefined || lng === undefined) return null;
 
             return (
               <AdvancedMarker
-                key={incident._id}
-                position={{ lat: incident.location.lat, lng: incident.location.lng }}
-                onClick={() => onSelect(incident._id)}
+                key={incident._id || incident.id}
+                position={{ lat, lng }}
+                onClick={() => onSelect(incident._id || incident.id)}
                 zIndex={active ? 100 : 1}
               >
                 <motion.div
@@ -93,11 +98,16 @@ function MapViewportController({
 
   useEffect(() => {
     if (!map || !activeId) return
-    const incident = incidents.find((i) => i._id === activeId)
+    const incident = incidents.find((i) => i._id === activeId || i.id === activeId)
     if (!incident) return
 
-    map.panTo({ lat: incident.location.lat, lng: incident.location.lng })
-    map.setZoom(14)
+    const lat = incident.lat !== undefined ? incident.lat : incident.location?.lat;
+    const lng = incident.lng !== undefined ? incident.lng : incident.location?.lng;
+
+    if (lat !== undefined && lng !== undefined) {
+      map.panTo({ lat, lng })
+      map.setZoom(14)
+    }
   }, [activeId, incidents, map])
 
   useEffect(() => {

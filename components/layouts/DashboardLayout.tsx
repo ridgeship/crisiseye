@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, Bell, User, LogOut, Settings, LayoutDashboard, AlertTriangle, ShieldCheck } from "lucide-react";
+import { Menu, X, Bell, User, LogOut, Settings, LayoutDashboard, AlertTriangle, ShieldCheck, Compass } from "lucide-react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -45,6 +45,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
   ] : [
     { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
     { name: "Report Emergency", href: "/report", icon: AlertTriangle },
+    { name: "Discovery Feed", href: "/discovery", icon: Compass },
   ];
 
   return (

@@ -12,7 +12,7 @@ import { v } from "convex/values";
  * When integrated, this function will:
  * 1. Fetch the media from the URL.
  * 2. Send it to the Vision API to classify relevance to the emergency category.
- * 3. Assign a `confidenceScore` (0-100) and update `verificationStatus` 
+ * 3. Assign an `aiConfidence` (0-100) and update `verificationResult` 
  *    to 'verified' or 'dispatcher-review'.
  */
 export const validateMedia = internalMutation({
@@ -32,21 +32,21 @@ export const validateMedia = internalMutation({
     // to ensure no fake/prank images slip through automatically.
     
     await ctx.db.patch(args.incidentId, {
-      verificationStatus: "needs-verification",
-      evidenceSummary: "Media uploaded. Pending AI/Dispatcher verification.",
-      // confidenceScore: score // Will be populated by AI
+      verificationResult: "needs-verification",
+      // aiConfidence: score // Will be populated by AI
     });
 
-    // Add to timeline
+    // Add to statusHistory
     const incident = await ctx.db.get(args.incidentId);
     if (incident) {
-      const timeline = incident.timeline || [];
-      timeline.push({
-        time: Date.now(),
-        status: "Media Received",
-        note: "Media queued for verification engine."
+      const statusHistory = incident.statusHistory || [];
+      statusHistory.push({
+        status: "AI_REVIEW",
+        timestamp: Date.now(),
+        note: "Media queued for verification engine.",
       });
-      await ctx.db.patch(args.incidentId, { timeline });
+      await ctx.db.patch(args.incidentId, { statusHistory, updatedAt: Date.now() });
     }
   },
 });
+

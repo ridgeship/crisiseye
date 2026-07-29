@@ -138,3 +138,88 @@ export const assignUnit = mutation({
     });
   },
 });
+
+export const addIncidentNote = mutation({
+  args: {
+    id: v.id("incidents"),
+    note: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireResponder(ctx);
+    const incident = await ctx.db.get(args.id);
+    if (!incident) throw new Error("Incident not found");
+
+    const now = Date.now();
+    const newNote = {
+      note: args.note,
+      timestamp: now,
+      author: user.name || user.role || "Operator",
+    };
+
+    const notesHistory = incident.notesHistory ? [...incident.notesHistory, newNote] : [newNote];
+
+    await ctx.db.patch(args.id, {
+      responderNotes: args.note, // Set the current active note
+      notesHistory,
+      updatedAt: now,
+    });
+  },
+});
+
+export const publishIncident = mutation({
+  args: {
+    id: v.id("incidents"),
+    publicTitle: v.string(),
+    publicSummary: v.string(),
+    publicLocation: v.string(),
+    publicMedia: v.optional(v.array(v.string())),
+    visibility: v.union(v.literal("PUBLIC"), v.literal("RESTRICTED"), v.literal("PRIVATE")),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireResponder(ctx);
+    const incident = await ctx.db.get(args.id);
+    if (!incident) throw new Error("Incident not found");
+
+    if (incident.privacyPreference !== "allow_publication" && args.visibility === "PUBLIC") {
+      throw new Error("Cannot publish publicly: Citizen requested privacy.");
+    }
+
+    const now = Date.now();
+    const newTimelineEvent = {
+      status: "PUBLISHED",
+      timestamp: now,
+      note: `Incident approved for publication as "${args.publicTitle}" by ${user.role}`,
+      userId: user._id,
+    };
+
+    const statusHistory = incident.statusHistory ? [...incident.statusHistory, newTimelineEvent] : [newTimelineEvent];
+
+    await ctx.db.patch(args.id, {
+      status: "PUBLISHED",
+      publicTitle: args.publicTitle,
+      publicSummary: args.publicSummary,
+      publicLocation: args.publicLocation,
+      publicMedia: args.publicMedia,
+      published: true,
+      publishedAt: now,
+      visibility: args.visibility,
+      statusHistory,
+      updatedAt: now,
+    });
+
+    // Notify reporter if present
+    if (incident.reporterId) {
+      await ctx.db.insert("notifications", {
+        userId: incident.reporterId,
+        incidentId: incident._id,
+        type: "incident_published",
+        title: "Incident Published",
+        message: `Your reported incident has been reviewed and published to the Discovery Portal as "${args.publicTitle}".`,
+        read: false,
+        createdAt: now,
+      });
+    }
+  },
+});
+
+
