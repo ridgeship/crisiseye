@@ -29,20 +29,20 @@ export default function LiveQueue() {
 
   let filtered = incidents.filter(i => 
     i.description?.toLowerCase().includes(search.toLowerCase()) || 
-    i.type.toLowerCase().includes(search.toLowerCase()) ||
+    i.incidentType.toLowerCase().includes(search.toLowerCase()) ||
     i.location.address?.toLowerCase().includes(search.toLowerCase())
   )
 
   // Sort: Put role's priority categories first, then sort by timestamp
   filtered = filtered.sort((a, b) => {
-    const aPriority = prioritizedCategories.includes(a.type) ? 1 : 0;
-    const bPriority = prioritizedCategories.includes(b.type) ? 1 : 0;
+    const aPriority = prioritizedCategories.includes(a.incidentType) ? 1 : 0;
+    const bPriority = prioritizedCategories.includes(b.incidentType) ? 1 : 0;
     
     if (aPriority !== bPriority) {
       return bPriority - aPriority; // Priority categories first
     }
     // Then sort chronologically (newest first)
-    return b.timestamp - a.timestamp;
+    return b.createdAt - a.createdAt;
   });
 
   const selectedIncident = incidents.find(i => i._id === selectedId)
@@ -76,17 +76,17 @@ export default function LiveQueue() {
               )}
             >
               <div className="flex justify-between">
-                <span className="text-xs font-bold uppercase tracking-wider text-primary">{incident.type}</span>
+                <span className="text-xs font-bold uppercase tracking-wider text-primary">{incident.incidentType}</span>
                 <span className="text-xs font-mono text-slate-500">
-                  {new Date(incident.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {new Date(incident.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
               <p className="mt-1 line-clamp-1 text-sm font-medium text-slate-200">{incident.location.address}</p>
               <div className="mt-3 flex items-center gap-2">
                 <span className={cn(
                   "rounded px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider",
-                  incident.status === "Active" ? "bg-red-500/20 text-red-400" :
-                  incident.status === "Responding" ? "bg-orange-500/20 text-orange-400" :
+                  ["RECEIVED", "AI_REVIEW", "PENDING_REVIEW"].includes(incident.status) ? "bg-red-500/20 text-red-400" :
+                  ["ACCEPTED", "ASSIGNED", "EN_ROUTE", "ON_SCENE"].includes(incident.status) ? "bg-orange-500/20 text-orange-400" :
                   "bg-emerald-500/20 text-emerald-400"
                 )}>
                   {incident.status}
@@ -94,6 +94,11 @@ export default function LiveQueue() {
                 {incident.assignedAgency && (
                   <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                     {incident.assignedAgency}
+                  </span>
+                )}
+                {incident.privacyPreference === 'private' && (
+                  <span className="rounded bg-slate-800 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                    PRIVATE
                   </span>
                 )}
               </div>
@@ -113,7 +118,7 @@ export default function LiveQueue() {
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-3">
-                  <h2 className="text-xl font-bold text-white">{selectedIncident.type}</h2>
+                  <h2 className="text-xl font-bold text-white">{selectedIncident.incidentType}</h2>
                   <span className={cn(
                     "rounded px-2 py-1 text-xs font-bold uppercase tracking-wider",
                     selectedIncident.severity === "critical" ? "bg-red-500/20 text-red-400 border border-red-500/30" :
@@ -141,7 +146,7 @@ export default function LiveQueue() {
                 <p className="font-mono text-sm text-slate-500">ID: {selectedIncident._id}</p>
                 <p className="mt-1 flex items-center justify-end gap-1 text-xs text-slate-400">
                   <Clock className="size-3" />
-                  {new Date(selectedIncident.timestamp).toLocaleString()}
+                  {new Date(selectedIncident.createdAt).toLocaleString()}
                 </p>
               </div>
             </div>
@@ -164,22 +169,22 @@ export default function LiveQueue() {
                 </div>
                 <div className="grid grid-cols-3 gap-4 text-sm">
                   <div>
-                    <p className="text-slate-500">Confidence Score</p>
+                    <p className="text-slate-500">AI Confidence</p>
                     <p className={cn(
                       "font-mono text-lg font-bold",
-                      (selectedIncident.confidenceScore ?? 0) >= 80 ? "text-emerald-400" :
-                      (selectedIncident.confidenceScore ?? 0) >= 50 ? "text-amber-400" : "text-red-400"
+                      (selectedIncident.aiConfidence ?? 0) >= 80 ? "text-emerald-400" :
+                      (selectedIncident.aiConfidence ?? 0) >= 50 ? "text-amber-400" : "text-red-400"
                     )}>
-                      {selectedIncident.confidenceScore ?? 0}%
+                      {selectedIncident.aiConfidence ?? 0}%
                     </p>
                   </div>
                   <div>
-                    <p className="text-slate-500">Status</p>
-                    <p className="font-semibold text-slate-200 capitalize">{selectedIncident.verificationStatus || "Pending"}</p>
+                    <p className="text-slate-500">Result</p>
+                    <p className="font-semibold text-slate-200 capitalize">{selectedIncident.verificationResult || "Pending"}</p>
                   </div>
                   <div>
-                    <p className="text-slate-500">Escalation Level</p>
-                    <p className="font-semibold text-red-400">Level {selectedIncident.escalationLevel || 1}</p>
+                    <p className="text-slate-500">Visibility</p>
+                    <p className="font-semibold text-slate-200 capitalize">{selectedIncident.visibility}</p>
                   </div>
                 </div>
 
@@ -225,6 +230,17 @@ export default function LiveQueue() {
                   <button 
                     onClick={() => {
                         if (user) {
+                          void updateStatus({ id: selectedIncident._id, status: "ACCEPTED", note: "Incident acknowledged" })
+                        }
+                      }}
+                    className="flex items-center justify-center gap-2 rounded-md border border-slate-500/30 bg-slate-500/10 py-2.5 text-sm font-semibold text-slate-300 transition-colors hover:bg-slate-500/20"
+                  >
+                    <CheckCircle2 className="size-4" />
+                    Accept
+                  </button>
+                  <button 
+                    onClick={() => {
+                        if (user) {
                           void assignUnit({ id: selectedIncident._id, unitName: "Unit Alpha-1" })
                         }
                       }}
@@ -236,7 +252,7 @@ export default function LiveQueue() {
                   <button 
                     onClick={() => {
                         if (user) {
-                          void updateStatus({ id: selectedIncident._id, status: "Responding", note: "Unit dispatched" })
+                          void updateStatus({ id: selectedIncident._id, status: "EN_ROUTE", note: "Unit dispatched" })
                         }
                       }}
                     className="flex items-center justify-center gap-2 rounded-md border border-orange-500/30 bg-orange-500/10 py-2.5 text-sm font-semibold text-orange-400 transition-colors hover:bg-orange-500/20"
@@ -247,7 +263,18 @@ export default function LiveQueue() {
                   <button 
                     onClick={() => {
                         if (user) {
-                          void updateStatus({ id: selectedIncident._id, status: "Resolved", note: "Incident marked as resolved" })
+                          void updateStatus({ id: selectedIncident._id, status: "ON_SCENE", note: "Unit arrived on scene" })
+                        }
+                      }}
+                    className="flex items-center justify-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 py-2.5 text-sm font-semibold text-amber-400 transition-colors hover:bg-amber-500/20"
+                  >
+                    <MapPin className="size-4" />
+                    Mark On Scene
+                  </button>
+                  <button 
+                    onClick={() => {
+                        if (user) {
+                          void updateStatus({ id: selectedIncident._id, status: "RESOLVED", note: "Incident marked as resolved" })
                         }
                       }}
                     className="col-span-2 flex items-center justify-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 py-2.5 text-sm font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/20"
@@ -255,6 +282,18 @@ export default function LiveQueue() {
                     <CheckCircle2 className="size-4" />
                     Mark Resolved
                   </button>
+                  {selectedIncident.status === "RESOLVED" && selectedIncident.privacyPreference === "allow_publication" && (
+                    <button 
+                      onClick={() => {
+                          if (user) {
+                            void updateStatus({ id: selectedIncident._id, status: "PUBLISHED", note: "Incident published to public map" })
+                          }
+                        }}
+                      className="col-span-2 flex items-center justify-center gap-2 rounded-md border border-purple-500/30 bg-purple-500/10 py-2.5 text-sm font-semibold text-purple-400 transition-colors hover:bg-purple-500/20"
+                    >
+                      Publish to Map
+                    </button>
+                  )}
                 </div>
               </div>
 
@@ -265,7 +304,7 @@ export default function LiveQueue() {
               <h3 className="mb-6 text-xs font-bold uppercase tracking-wider text-slate-500">Emergency Timeline</h3>
               
               <div className="relative space-y-6 before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-slate-700 before:to-transparent">
-                {selectedIncident.timeline?.map((event: any, i: number) => (
+                {selectedIncident.statusHistory?.map((event: any, i: number) => (
                   <div key={i} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                     
                     {/* Timeline dot */}
@@ -280,14 +319,14 @@ export default function LiveQueue() {
                       </div>
                       <p className="text-[11px] text-slate-400">{event.note}</p>
                       <time className="mt-2 block font-mono text-[10px] text-slate-500">
-                        {new Date(event.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                        {new Date(event.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
                       </time>
                     </div>
 
                   </div>
                 ))}
 
-                {!selectedIncident.timeline && (
+                {(!selectedIncident.statusHistory || selectedIncident.statusHistory.length === 0) && (
                   <p className="text-center text-xs text-slate-500">No events logged yet.</p>
                 )}
               </div>

@@ -19,47 +19,72 @@ export default defineSchema({
   }).index("email", ["email"]),
 
   incidents: defineTable({
-    type: v.string(), // Fire, Flood, etc.
-    description: v.optional(v.string()),
+    reporterId: v.optional(v.id("users")),
+    incidentType: v.string(), // Fire, Flood, etc.
     severity: v.string(), // low, moderate, high, critical
+    description: v.optional(v.string()),
     location: v.object({
       lat: v.number(),
       lng: v.number(),
       address: v.optional(v.string()),
       isApproximate: v.optional(v.boolean()),
     }),
-    mediaUrls: v.optional(v.array(v.string())), // Images or Video URLs (or storage IDs)
-    voiceReportUrl: v.optional(v.string()), // Voice note URL
-    status: v.string(), // Active, Responding, Resolved, etc.
-    timestamp: v.number(),
-    userId: v.optional(v.id("users")),
-
-    // RESPONDER DASHBOARD FIELDS
-    assignedAgency: v.optional(v.string()), // 'police', 'fire', 'ambulance', 'nadmo', 'ecg'
-    assignedUnit: v.optional(v.string()),
-    verificationStatus: v.optional(v.string()), // 'pending', 'verified', 'needs-verification', 'dispatcher-review'
-    confidenceScore: v.optional(v.number()), // 0 - 100
-    evidenceSummary: v.optional(v.string()),
-    escalationLevel: v.optional(v.number()), // 0, 1, 2, 3
-    acknowledgementStatus: v.optional(v.string()), // 'pending', 'acknowledged', 'escalated'
+    media: v.optional(v.array(v.string())), // renamed from mediaUrls
+    voiceNote: v.optional(v.string()), // renamed from voiceReportUrl
     
-    // AI Vision fields
-    mediaStatus: v.optional(v.string()), // 'Relevant', 'Needs Manual Review', 'Rejected'
-    aiSummary: v.optional(v.string()),
-    evidenceConfidence: v.optional(v.string()), // 'High', 'Medium', 'Low'
+    visibility: v.union(v.literal("PRIVATE"), v.literal("PUBLIC"), v.literal("RESTRICTED")),
+    privacyPreference: v.union(v.literal("private"), v.literal("allow_publication")),
     
-    // Emergency Timeline (Array of events)
-    timeline: v.optional(
-      v.array(
-        v.object({
-          time: v.number(),
-          status: v.string(),
-          note: v.string(),
-        })
-      )
+    status: v.union(
+      v.literal("RECEIVED"), 
+      v.literal("AI_REVIEW"), 
+      v.literal("PENDING_REVIEW"), 
+      v.literal("ACCEPTED"), 
+      v.literal("ASSIGNED"), 
+      v.literal("EN_ROUTE"), 
+      v.literal("ON_SCENE"), 
+      v.literal("RESOLVED"), 
+      v.literal("PUBLISHED"), 
+      v.literal("ARCHIVED")
     ),
+    
+    statusHistory: v.array(v.object({
+      status: v.string(),
+      timestamp: v.number(),
+      note: v.optional(v.string()),
+      userId: v.optional(v.id("users")),
+    })),
+    
+    assignedAgency: v.optional(v.string()),
+    assignedResponder: v.optional(v.id("users")),
+    
+    aiConfidence: v.optional(v.number()),
+    verificationResult: v.optional(v.string()),
+    
+    createdAt: v.number(),
+    updatedAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+    publishedAt: v.optional(v.number()),
+    
+    published: v.optional(v.boolean()),
+    publishable: v.optional(v.boolean()),
+    
+    publicSummary: v.optional(v.string()),
+    responderNotes: v.optional(v.string()),
+    privateEvidence: v.optional(v.string()),
   })
     .index("by_status", ["status"])
-    .index("by_type", ["type"])
-    .index("by_agency", ["assignedAgency"]),
+    .index("by_type", ["incidentType"])
+    .index("by_agency", ["assignedAgency"])
+    .index("by_visibility", ["visibility"]),
+    
+  notifications: defineTable({
+    userId: v.id("users"),
+    incidentId: v.optional(v.id("incidents")),
+    type: v.string(),
+    title: v.string(),
+    message: v.string(),
+    read: v.boolean(),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
 });

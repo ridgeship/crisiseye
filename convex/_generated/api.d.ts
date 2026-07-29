@@ -9,9 +9,10 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as constants from "../constants.js";
 import type * as http from "../http.js";
 import type * as incidents from "../incidents.js";
-import type * as mockAuth from "../mockAuth.js";
+import type * as migrations from "../migrations.js";
 import type * as responder from "../responder.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
@@ -26,9 +27,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  constants: typeof constants;
   http: typeof http;
   incidents: typeof incidents;
-  mockAuth: typeof mockAuth;
+  migrations: typeof migrations;
   responder: typeof responder;
   seed: typeof seed;
   users: typeof users;

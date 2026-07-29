@@ -37,14 +37,14 @@ export default function DashboardPage() {
   }
 
   // Derive metrics
-  const activeCount = incidents.filter((i: any) => i.severity !== "Resolved").length;
-  const resolvedCount = incidents.filter((i: any) => i.severity === "Resolved").length;
+  const activeCount = incidents.filter((i: any) => !["RESOLVED", "PUBLISHED", "ARCHIVED"].includes(i.status)).length;
+  const resolvedCount = incidents.filter((i: any) => ["RESOLVED", "PUBLISHED"].includes(i.status)).length;
   // Just a static average for demonstration if there's no real historical data to compute
   const avgResponseTime = "12m 45s";
 
   // Data for charts
   const categoryCounts = incidents.reduce((acc: any, inc: any) => {
-    const key = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === inc.type) || "other";
+    const key = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === inc.incidentType) || "other";
     acc[key] = (acc[key] || 0) + 1;
     return acc;
   }, {});
@@ -199,7 +199,7 @@ export default function DashboardPage() {
           </div>
           <div className="flex-1 overflow-y-auto p-4 space-y-4">
             {incidents.slice(0, 15).map((incident: any) => {
-              const date = new Date(incident._creationTime);
+              const date = new Date(incident.createdAt);
               const timeString = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
               
               return (
@@ -212,13 +212,23 @@ export default function DashboardPage() {
                   
                   <div className="rounded-xl border border-border/40 bg-secondary/20 p-3">
                     <div className="flex justify-between items-start mb-1">
-                      <span className="font-semibold text-sm text-foreground">{incident.type}</span>
+                      <span className="font-semibold text-sm text-foreground">{incident.incidentType}</span>
                       <span className="text-xs text-muted-foreground font-mono">{timeString}</span>
                     </div>
                     <p className="text-xs text-muted-foreground truncate mb-2">{incident.location.address}</p>
-                    <span className="inline-flex rounded-md bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
-                      {incident.severity}
-                    </span>
+                    <div className="flex gap-2">
+                      <span className="inline-flex rounded-md bg-destructive/10 px-2 py-0.5 text-[10px] font-medium text-destructive">
+                        {incident.severity}
+                      </span>
+                      <span className="inline-flex rounded-md bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                        {incident.status}
+                      </span>
+                      {incident.privacyPreference === 'private' && (
+                        <span className="inline-flex rounded-md bg-slate-500/10 px-2 py-0.5 text-[10px] font-medium text-slate-400">
+                          Private
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

@@ -63,12 +63,12 @@ export function MapView() {
   const filtered = useMemo(() => {
     return liveIncidents.filter((i: any) => {
       // Find category key from label
-      const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === i.type) || 'other'
+      const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === i.incidentType) || 'other'
       const catOk = activeCats.size === 0 || activeCats.has(catKey as IncidentCategory)
       const q = query.trim().toLowerCase()
       const queryOk =
         !q ||
-        i.type.toLowerCase().includes(q) ||
+        i.incidentType.toLowerCase().includes(q) ||
         (i.location?.address || '').toLowerCase().includes(q)
       return catOk && queryOk
     })
@@ -157,7 +157,7 @@ export function MapView() {
           <div className="flex-1 overflow-y-auto p-3">
             <ul className="space-y-2">
               {filtered.map((incident: any) => {
-                const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.type) || 'other'
+                const catKey = CATEGORY_KEYS.find(k => CATEGORY_META[k].label === incident.incidentType) || 'other'
                 const meta = CATEGORY_META[catKey as IncidentCategory]
                 const Icon = meta.icon
                 const sev = SEVERITY_META[severityFromLabel(incident.severity)]
@@ -182,10 +182,10 @@ export function MapView() {
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center justify-between gap-2">
                             <p className="truncate text-sm font-semibold text-foreground">
-                              {incident.type}
+                              {incident.incidentType}
                             </p>
                             <span className="shrink-0 font-mono text-[10px] text-muted-foreground">
-                              {timeAgo(incident._creationTime)}
+                              {timeAgo(incident.createdAt)}
                             </span>
                           </div>
                           <p className="truncate text-xs text-muted-foreground">

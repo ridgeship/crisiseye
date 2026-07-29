@@ -1,16 +1,25 @@
 import { mutation, query } from "./_generated/server";
 import { v } from "convex/values";
+import { auth } from "./auth";
 
 export const getIncidents = query({
   args: {},
   handler: async (ctx) => {
-    return await ctx.db.query("incidents").order("desc").collect();
+    // Only return incidents that are public, or reported by the current user
+    const allIncidents = await ctx.db.query("incidents").order("desc").collect();
+    const userId = await auth.getUserId(ctx);
+    
+    return allIncidents.filter((incident) => {
+      if (incident.visibility === "PUBLIC") return true;
+      if (userId && incident.reporterId === userId) return true;
+      return false;
+    });
   },
 });
 
 export const reportIncident = mutation({
   args: {
-    type: v.string(),
+    incidentType: v.string(),
     description: v.optional(v.string()),
     severity: v.string(),
     location: v.object({
@@ -19,28 +28,29 @@ export const reportIncident = mutation({
       address: v.optional(v.string()),
       isApproximate: v.optional(v.boolean()),
     }),
-    mediaUrls: v.optional(v.array(v.string())),
-    voiceReportUrl: v.optional(v.string()),
-    mediaStatus: v.optional(v.string()),
-    aiSummary: v.optional(v.string()),
-    evidenceConfidence: v.optional(v.string()),
+    media: v.optional(v.array(v.string())),
+    voiceNote: v.optional(v.string()),
+    privacyPreference: v.union(v.literal("private"), v.literal("allow_publication")),
   },
   handler: async (ctx, args) => {
-    // We could add user auth check here later
+    const userId = await auth.getUserId(ctx);
     const now = Date.now();
+    
     const newIncidentId = await ctx.db.insert("incidents", {
       ...args,
-      status: "Active",
-      timestamp: now,
-      verificationStatus: "pending",
-      escalationLevel: 1,
-      acknowledgementStatus: "pending",
-      timeline: [{
-        time: now,
-        status: "Citizen Report Received",
-        note: "Initial report received from citizen"
-      }]
+      reporterId: userId ?? undefined,
+      visibility: "PRIVATE", // Starts as private
+      status: "RECEIVED",
+      statusHistory: [{
+        status: "RECEIVED",
+        timestamp: now,
+        note: "Report received from citizen.",
+        userId: userId ?? undefined,
+      }],
+      createdAt: now,
+      updatedAt: now,
     });
+    
     return newIncidentId;
   },
 });

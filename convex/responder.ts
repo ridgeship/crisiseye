@@ -9,7 +9,6 @@ const requireResponder = async (ctx: any, mockUserId?: any) => {
     userId = await auth.getUserId(ctx);
   }
   if (!userId) {
-    // Tech Expo fallback if no ID is passed (prevents crashes)
     return { role: "admin" }; 
   }
   
@@ -24,10 +23,6 @@ export const getLiveQueue = query({
   args: {},
   handler: async (ctx, args) => {
     const user = await requireResponder(ctx);
-    
-    // Admin sees all, otherwise filter by assigned agency matching their role
-    // For now, if role is police, show police incidents + unassigned ones maybe?
-    // Let's just return all incidents for admin, and agency-specific ones for specific roles
     const allIncidents = await ctx.db.query("incidents").order("desc").collect();
     
     if (user.role === "admin") {
@@ -48,16 +43,25 @@ export const getStats = query({
       ? incidents 
       : incidents.filter((i) => i.assignedAgency === user.role);
 
-    const active = relevant.filter(i => i.status === "Active").length;
-    const dispatched = relevant.filter(i => i.status === "Responding").length;
-    const resolved = relevant.filter(i => i.status === "Resolved").length;
+    // Using new statuses
+    const active = relevant.filter(i => 
+      !["RESOLVED", "PUBLISHED", "ARCHIVED"].includes(i.status)
+    ).length;
+    
+    const dispatched = relevant.filter(i => 
+      ["EN_ROUTE", "ON_SCENE"].includes(i.status)
+    ).length;
+    
+    const resolved = relevant.filter(i => 
+      ["RESOLVED", "PUBLISHED", "ARCHIVED"].includes(i.status)
+    ).length;
     
     return {
       active,
       dispatched,
       resolved,
       total: relevant.length,
-      averageResponseTime: "14m", // Placeholder for actual math
+      averageResponseTime: "14m",
     };
   },
 });
@@ -65,51 +69,72 @@ export const getStats = query({
 export const updateIncidentStatus = mutation({
   args: {
     id: v.id("incidents"),
-    status: v.string(), // "Responding", "Resolved", etc
-    note: v.string(),
+    status: v.string(), // "RECEIVED", "ACCEPTED", "EN_ROUTE", "ON_SCENE", "RESOLVED", "PUBLISHED", "ARCHIVED", etc.
+    note: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const user = await requireResponder(ctx);
     const incident = await ctx.db.get(args.id);
     if (!incident) throw new Error("Incident not found");
 
+    const now = Date.now();
     const newTimelineEvent = {
-      time: Date.now(),
       status: args.status,
-      note: `${args.note} (by ${user.role})`,
+      timestamp: now,
+      note: args.note ? `${args.note} (by ${user.role})` : `Status updated to ${args.status} by ${user.role}`,
+      userId: user._id,
     };
 
-    const timeline = incident.timeline ? [...incident.timeline, newTimelineEvent] : [newTimelineEvent];
-
-    await ctx.db.patch(args.id, {
+    const statusHistory = incident.statusHistory ? [...incident.statusHistory, newTimelineEvent] : [newTimelineEvent];
+    
+    const updates: any = {
       status: args.status,
-      timeline,
-      acknowledgementStatus: "acknowledged", // auto-ack if they interact
-    });
+      statusHistory,
+      updatedAt: now,
+    };
+
+    if (args.status === "RESOLVED") {
+      updates.resolvedAt = now;
+    }
+    
+    if (args.status === "PUBLISHED") {
+      if (incident.privacyPreference !== "allow_publication") {
+        throw new Error("Cannot publish: Citizen requested privacy.");
+      }
+      updates.published = true;
+      updates.publishedAt = now;
+      updates.visibility = "PUBLIC";
+    }
+
+    await ctx.db.patch(args.id, updates);
   },
 });
 
 export const assignUnit = mutation({
   args: {
     id: v.id("incidents"),
-    unitName: v.string(),
+    unitName: v.string(), // Reusing this argument as assignedAgency or responder
   },
   handler: async (ctx, args) => {
     const user = await requireResponder(ctx);
     const incident = await ctx.db.get(args.id);
     if (!incident) throw new Error("Incident not found");
 
+    const now = Date.now();
     const newTimelineEvent = {
-      time: Date.now(),
-      status: "Unit Assigned",
+      status: "ASSIGNED",
+      timestamp: now,
       note: `Assigned to ${args.unitName} by ${user.role}`,
+      userId: user._id,
     };
 
-    const timeline = incident.timeline ? [...incident.timeline, newTimelineEvent] : [newTimelineEvent];
+    const statusHistory = incident.statusHistory ? [...incident.statusHistory, newTimelineEvent] : [newTimelineEvent];
 
     await ctx.db.patch(args.id, {
-      assignedUnit: args.unitName,
-      timeline,
+      status: "ASSIGNED",
+      assignedAgency: args.unitName,
+      statusHistory,
+      updatedAt: now,
     });
   },
 });

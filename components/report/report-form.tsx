@@ -141,6 +141,8 @@ export function ReportForm() {
     address: '',
     status: 'idle',
   })
+  const [privacyPreference, setPrivacyPreference] = useState<'private' | 'allow_publication'>('private')
+  const [incidentId, setIncidentId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // @ts-ignore
@@ -238,8 +240,8 @@ export function ReportForm() {
     try {
       // In a real scenario, files and voiceBlob would be uploaded to Convex Storage first
       // For this demo, we'll assume they are handled or just pass empty for media URLs if not fully implemented.
-      await reportIncident({
-        type: CATEGORY_META[category!].label,
+      const id = await reportIncident({
+        incidentType: CATEGORY_META[category!].label,
         description: description,
         severity: SEVERITY_META[severity].label,
         location: {
@@ -248,13 +250,12 @@ export function ReportForm() {
           address: location.address
         },
         // mock URLs for demonstration
-        mediaUrls: files.map(f => f.name),
-        voiceReportUrl: voiceBlob ? "voice-report-audio" : undefined,
-        mediaStatus: mediaStatus || undefined,
-        aiSummary: aiSummary || undefined,
-        evidenceConfidence: evidenceConfidence || undefined
+        media: files.map(f => f.name),
+        voiceNote: voiceBlob ? "voice-report-audio" : undefined,
+        privacyPreference,
       });
       
+      setIncidentId(id)
       setSubmitted(true)
       window.scrollTo({ top: 0, behavior: 'smooth' })
     } catch (err) {
@@ -266,7 +267,7 @@ export function ReportForm() {
   }
 
   if (submitted) {
-    const ref = `INC-${Math.floor(1000 + Math.random() * 9000)}`
+    const ref = incidentId || `INC-${Math.floor(1000 + Math.random() * 9000)}`
     return (
       <div className="rounded-2xl border border-primary/30 bg-card/60 p-8 text-center">
         <span className="mx-auto inline-flex size-14 items-center justify-center rounded-full bg-primary/15 text-primary">
@@ -282,7 +283,7 @@ export function ReportForm() {
         <div className="mx-auto mt-6 max-w-sm space-y-2 text-left">
           {[
             'Location and timestamp captured',
-            'Report entered into the verification engine',
+            'Report entered into the verification engine (Estimated review: < 2 mins)',
             'Nearest response agency will be notified',
           ].map((line) => (
             <div
@@ -295,7 +296,10 @@ export function ReportForm() {
           ))}
         </div>
         <div className="mt-7 flex flex-col justify-center gap-3 sm:flex-row">
-          <Button render={<Link href="/map" />} className="h-11 rounded-full px-5">
+          <Button render={<Link href="/dashboard" />} className="h-11 rounded-full px-5">
+            View My Reports
+          </Button>
+          <Button render={<Link href="/map" />} variant="outline" className="h-11 rounded-full px-5 bg-background">
             View on Live Map
           </Button>
           <Button
@@ -547,6 +551,58 @@ export function ReportForm() {
               </button>
             )
           })}
+        </div>
+      </fieldset>
+
+      {/* Privacy Preference */}
+      <fieldset>
+        <legend className="text-sm font-semibold text-foreground">Privacy Preference</legend>
+        <p className="mt-1 text-xs text-muted-foreground">
+          Choose whether responders can publish an anonymised version of this incident after it has been resolved to improve public awareness. Responders always have final approval.
+        </p>
+        <div className="mt-3 flex flex-col gap-2.5 sm:flex-row">
+          <label
+            className={cn(
+              "flex flex-1 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
+              privacyPreference === 'private'
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border/60 bg-card/40 text-muted-foreground hover:bg-secondary/40'
+            )}
+          >
+            <input
+              type="radio"
+              name="privacy"
+              value="private"
+              checked={privacyPreference === 'private'}
+              onChange={() => setPrivacyPreference('private')}
+              className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Keep Private</span>
+              <span className="mt-1 text-xs opacity-80">Only responders will see this report.</span>
+            </div>
+          </label>
+          <label
+            className={cn(
+              "flex flex-1 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
+              privacyPreference === 'allow_publication'
+                ? 'border-primary bg-primary/10 text-foreground'
+                : 'border-border/60 bg-card/40 text-muted-foreground hover:bg-secondary/40'
+            )}
+          >
+            <input
+              type="radio"
+              name="privacy"
+              value="allow_publication"
+              checked={privacyPreference === 'allow_publication'}
+              onChange={() => setPrivacyPreference('allow_publication')}
+              className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium">Allow Publication</span>
+              <span className="mt-1 text-xs opacity-80">May appear on public maps when resolved.</span>
+            </div>
+          </label>
         </div>
       </fieldset>
 
