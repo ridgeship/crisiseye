@@ -33,14 +33,59 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
     e.preventDefault();
     setLoading(true);
     
-    const role = flow === "responder-login" ? "responder" : flow === "admin-login" ? "admin" : "citizen";
+    let finalEmail = email;
+    let finalRole = flow === "responder-login" ? "responder" : flow === "admin-login" ? "admin" : "citizen";
+    let finalName = name;
+
+    if (flow === "responder-login") {
+      const id = email.trim().toLowerCase();
+      const responderMap: Record<string, { email: string, name: string, role: string }> = {
+        police: { email: "police@crisiseye.gov", name: "Police Service", role: "police" },
+        fire: { email: "fire@crisiseye.gov", name: "Fire Service", role: "fire" },
+        ambulance: { email: "ambulance@crisiseye.gov", name: "Ambulance Service", role: "ambulance" },
+        nadmo: { email: "nadmo@crisiseye.gov", name: "NADMO", role: "nadmo" },
+        ecg: { email: "ecg@crisiseye.gov", name: "ECG", role: "ecg" },
+        gwc: { email: "gwa@crisiseye.gov", name: "Ghana Water", role: "gwa" },
+        gwa: { email: "gwa@crisiseye.gov", name: "Ghana Water", role: "gwa" },
+        admin: { email: "admin@crisiseye.gov", name: "Admin Operations", role: "admin" },
+      };
+
+      if (responderMap[id]) {
+        finalEmail = responderMap[id].email;
+        finalRole = responderMap[id].role;
+        finalName = responderMap[id].name;
+      } else if (!email.includes("@")) {
+        // Fallback for custom responder IDs
+        finalEmail = `${id}@crisiseye.gov`;
+        finalRole = "responder";
+        finalName = email;
+      }
+    } else if (flow === "login" && email.includes("@")) {
+      // If logging in as citizen but typing a responder email, handle it gracefully
+      const prefix = email.split("@")[0].toLowerCase();
+      const validRoles = ["police", "fire", "ambulance", "nadmo", "ecg", "gwa", "admin"];
+      if (validRoles.includes(prefix) && email.endsWith("@crisiseye.gov")) {
+        finalRole = prefix;
+      }
+    }
 
     try {
       if (isRegister) {
-        await signIn("password", { name, email, password, flow: "signUp", role });
+        await signIn("password", { name: finalName, email: finalEmail, password, flow: "signUp", role: finalRole });
         router.push(redirectUrl);
       } else {
-        await signIn("password", { email, password, flow: "signIn" });
+        try {
+          await signIn("password", { email: finalEmail, password, flow: "signIn" });
+        } catch (err) {
+          // If sign-in fails and it's a responder login, attempt auto-signup with the password (e.g. 12345)
+          if (flow === "responder-login" || finalEmail.endsWith("@crisiseye.gov")) {
+            console.log("Responder account not found, auto-registering...");
+            await signIn("password", { name: finalName, email: finalEmail, password, flow: "signUp", role: finalRole });
+          } else {
+            throw err;
+          }
+        }
+
         const user = await convex.query(api.users.current);
         if (user) {
           const userRole = user.role || "citizen";
@@ -114,17 +159,19 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
               </motion.div>
             )}
             <div>
-              <label className="sr-only" htmlFor="email-address">Email address</label>
+              <label className="sr-only" htmlFor={flow === "responder-login" ? "responder-id" : "email-address"}>
+                {flow === "responder-login" ? "Responder ID" : "Email address"}
+              </label>
               <input
-                id="email-address"
+                id={flow === "responder-login" ? "responder-id" : "email-address"}
                 name="email"
-                type="email"
-                autoComplete="email"
+                type={flow === "responder-login" ? "text" : "email"}
+                autoComplete={flow === "responder-login" ? "username" : "email"}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="relative block w-full rounded-md border border-border/60 bg-background/50 px-3 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm transition-colors"
-                placeholder="Email address"
+                placeholder={flow === "responder-login" ? "Responder ID (e.g. Police, ECG, Fire)" : "Email address"}
               />
             </div>
             <div className="relative">

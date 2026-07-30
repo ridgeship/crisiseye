@@ -129,6 +129,7 @@ export function ReportForm() {
   const [description, setDescription] = useState('')
   const [confirmed, setConfirmed] = useState(false)
   const [files, setFiles] = useState<File[]>([])
+  const [rejectedFiles, setRejectedFiles] = useState<File[]>([])
   const [analyzingMedia, setAnalyzingMedia] = useState(false)
   const [mediaStatus, setMediaStatus] = useState<string | null>(null)
   const [aiSummary, setAiSummary] = useState<string | null>(null)
@@ -196,11 +197,13 @@ export function ReportForm() {
     setAiManualReview(false);
     setAiSpamOrMeme(false);
     setAiOverrideRequested(false);
+    setRejectedFiles([]);
 
     try {
       // Send the first image to our secure server-side API route
       const formData = new FormData();
       formData.append('image', newFiles[0]);
+      formData.append('category', CATEGORY_META[category!].label);
 
       const response = await fetch('/api/verify-incident', {
         method: 'POST',
@@ -221,12 +224,14 @@ export function ReportForm() {
       setAiSpamOrMeme(!!result.isMemeOrSpam);
 
       if (result.isMemeOrSpam || !result.isEmergencyRelated) {
-        // Rejected - do NOT add to files, show rejection with override option
+        // Rejected - do NOT add to files, store in rejectedFiles and show warning
         setMediaStatus("Rejected");
         setAiSummary(result.rejectionReason || "Content does not appear to show a valid emergency.");
         setEvidenceConfidence("Low");
+        setRejectedFiles(newFiles);
       } else {
         setFiles(prev => [...prev, ...newFiles].slice(0, 5));
+        setRejectedFiles([]);
         if (result.requiresManualReview) {
           setMediaStatus("Needs Manual Review");
           setAiSummary(result.rejectionReason || "Image flagged for manual review by a responder.");
@@ -242,6 +247,7 @@ export function ReportForm() {
       console.error("Vision API Error:", err);
       // Graceful fallback - allow submission with manual review flag
       setFiles(prev => [...prev, ...newFiles].slice(0, 5));
+      setRejectedFiles([]);
       setMediaStatus("Needs Manual Review");
       setAiSummary("Automatic media analysis is temporarily unavailable. A responder will review it.");
       setEvidenceConfidence("Low");
@@ -524,7 +530,10 @@ export function ReportForm() {
             </div>
             <button
               type="button"
-              onClick={() => { setAiOverrideRequested(true); setFiles(prev => prev); }}
+              onClick={() => {
+                setAiOverrideRequested(true);
+                setFiles(prev => [...prev, ...rejectedFiles].slice(0, 5));
+              }}
               className="self-start rounded-lg border border-destructive/40 bg-destructive/20 px-3 py-1.5 text-xs font-semibold text-destructive hover:bg-destructive/30 transition-colors"
             >
               Request Manual Override — Submit Anyway

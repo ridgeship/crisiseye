@@ -28,6 +28,7 @@ import { cn } from "@/lib/utils";
 import { Navbar } from "@/components/navbar";
 import { FloatingActions } from "@/components/floating-actions";
 import { AGENCIES, CATEGORY_META, type IncidentCategory } from "@/lib/data";
+import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 const DISCOVERY_CATEGORIES = [
   "All",
@@ -93,7 +94,7 @@ export default function DiscoveryPage() {
 
   if (feed === undefined) {
     return (
-      <>
+      <ProtectedRoute fallbackUrl="/login">
         <Navbar />
         <div className="flex h-[80vh] w-full items-center justify-center bg-[#070b14]">
           <div className="flex flex-col items-center gap-3">
@@ -102,7 +103,7 @@ export default function DiscoveryPage() {
           </div>
         </div>
         <FloatingActions />
-      </>
+      </ProtectedRoute>
     );
   }
 
@@ -124,7 +125,7 @@ export default function DiscoveryPage() {
   const selectedArticle = feed.find((a) => a.id === selectedArticleId);
 
   return (
-    <>
+    <ProtectedRoute fallbackUrl="/login">
       <Navbar />
       <div className="min-h-screen bg-[#070b14] pt-24 pb-12 text-slate-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 space-y-8">
@@ -418,6 +419,6 @@ export default function DiscoveryPage() {
       </AnimatePresence>
 
       <FloatingActions />
-    </>
+    </ProtectedRoute>
   );
 }

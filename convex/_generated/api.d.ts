@@ -9,12 +9,11 @@
  */
 
 import type * as auth from "../auth.js";
-import type * as bookmarks from "../bookmarks.js";
 import type * as constants from "../constants.js";
+import type * as discovery from "../discovery.js";
 import type * as http from "../http.js";
 import type * as incidents from "../incidents.js";
 import type * as migrations from "../migrations.js";
-import type * as notifications from "../notifications.js";
 import type * as responder from "../responder.js";
 import type * as seed from "../seed.js";
 import type * as users from "../users.js";
@@ -29,12 +28,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
-  bookmarks: typeof bookmarks;
   constants: typeof constants;
+  discovery: typeof discovery;
   http: typeof http;
   incidents: typeof incidents;
   migrations: typeof migrations;
-  notifications: typeof notifications;
   responder: typeof responder;
   seed: typeof seed;
   users: typeof users;

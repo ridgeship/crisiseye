@@ -6,25 +6,10 @@ import { GoogleGenAI, Type } from "@google/genai";
 const ai = new GoogleGenAI({});
 
 export async function POST(request: Request) {
-  // Graceful fallback if API key is not configured
-  if (!process.env.GEMINI_API_KEY) {
-    return NextResponse.json(
-      {
-        isEmergencyRelated: true,
-        isMemeOrSpam: false,
-        requiresManualReview: true,
-        confidenceScore: 0,
-        detectedLabels: [],
-        rejectionReason: null,
-        aiSkipped: true,
-      },
-      { status: 200 }
-    );
-  }
-
   try {
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
+    const category = formData.get("category") as string | null;
 
     if (!file) {
       return NextResponse.json(
@@ -44,14 +29,15 @@ export async function POST(request: Request) {
     const arrayBuffer = await file.arrayBuffer();
     const base64Data = Buffer.from(arrayBuffer).toString("base64");
 
-    // Prompt instructing Gemini 2.5 Flash on verification guidelines
+    // Prompt instructing Gemini 3.6 Flash on verification guidelines
     const prompt = `
 You are an automated emergency image verification classifier for an incident reporting system.
+${category ? `The user is reporting an incident under the category "${category}".` : ""}
 Analyze the provided image and classify it according to these rules:
 
 1. Emergency Verification:
    - "isEmergencyRelated": Set to true if the image depicts a real-world emergency, safety incident, or hazard (e.g., fires, smoke, floods, road accidents, vehicle crashes, structural collapse, hospital emergencies, bodily injury, medical distress, rescue operations).
-   - Set to false if it is unrelated to an emergency.
+   - Set to false if it is unrelated to an emergency or if it does not belong in an emergency reporting system (e.g., a simple household item, scenery, selfie, QR code).
 
 2. Spam / Irrelevant Detection:
    - "isMemeOrSpam": Set to true if the image is a meme, cartoon, anime, funny image, random selfie, indoor pet picture, food, unrelated screenshot, or obvious non-incident content.
@@ -67,9 +53,9 @@ Analyze the provided image and classify it according to these rules:
    - "rejectionReason": Provide a short clear message explaining why the image was rejected or flagged if applicable. If valid and accepted, set to null.
 `.trim();
 
-    // Request structured JSON output from gemini-2.5-flash using responseSchema
+    // Request structured JSON output from gemini-3.6-flash using responseSchema
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.6-flash",
       contents: [
         {
           inlineData: {
@@ -114,20 +100,11 @@ Analyze the provided image and classify it according to these rules:
     const verificationResult = JSON.parse(responseText);
 
     return NextResponse.json(verificationResult, { status: 200 });
-  } catch (error: unknown) {
+  } catch (error: any) {
     console.error("Error in incident image verification:", error);
-    // Graceful fallback - don't block citizen submission on AI errors
     return NextResponse.json(
-      {
-        isEmergencyRelated: true,
-        isMemeOrSpam: false,
-        requiresManualReview: true,
-        confidenceScore: 0,
-        detectedLabels: [],
-        rejectionReason: null,
-        aiSkipped: true,
-      },
-      { status: 200 }
+      { error: error.message || "Failed to process image verification." },
+      { status: 500 }
     );
   }
 }
