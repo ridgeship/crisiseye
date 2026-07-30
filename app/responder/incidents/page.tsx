@@ -33,7 +33,9 @@ import {
   Calendar,
   Building,
   Flag,
-  Archive
+  Archive,
+  History,
+  Info
 } from "lucide-react";
 import {
   Dialog,
@@ -56,8 +58,8 @@ const ROLE_PRIORITIES: Record<string, string[]> = {
 };
 
 export default function EmergencyOperationsCentre() {
-  const user = useQuery(api.users.current);
-  const incidents = useQuery(api.responder.getLiveQueue);
+  const user = useQuery(api.users.current, {});
+  const incidents = useQuery(api.responder.getLiveQueue, {});
   const updateStatus = useMutation(api.responder.updateIncidentStatus);
   const assignUnit = useMutation(api.responder.assignUnit);
   const addNote = useMutation(api.responder.addIncidentNote);
@@ -401,9 +403,9 @@ export default function EmergencyOperationsCentre() {
                   </div>
                   <div className="flex items-center gap-1">
                     {incident.visibility === "PUBLIC" ? (
-                      <Eye className="size-3 text-emerald-500" title="Public Visibility" />
+                      <span title="Public Visibility"><Eye className="size-3 text-emerald-500" /></span>
                     ) : (
-                      <EyeOff className="size-3 text-slate-500" title="Internal Private" />
+                      <span title="Internal Private"><EyeOff className="size-3 text-slate-500" /></span>
                     )}
                     {incident.aiConfidence && (
                       <span className="text-[9px] font-mono text-slate-500" title="AI Confidence">
@@ -845,6 +847,7 @@ export default function EmergencyOperationsCentre() {
         open={isPublishModalOpen} 
         onOpenChange={(isOpen) => !pubLoading && setIsPublishModalOpen(isOpen)}
       >
+        {selectedIncident && (
         <DialogContent className="bg-[#0b0f19] border border-slate-800 text-slate-200 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-white flex items-center gap-2">
@@ -1097,8 +1100,10 @@ export default function EmergencyOperationsCentre() {
             </div>
           </DialogFooter>
         </DialogContent>
+        )}
       </Dialog>
 
     </div>
   );
 }
+

@@ -31,7 +31,7 @@ export function Navbar() {
   
   const auth = useConvexAuth() || { isAuthenticated: false, isLoading: false };
   const { isAuthenticated, isLoading } = auth;
-  const user = useQuery(api.users.current);
+  const user = useQuery(api.users.current, {});
   const { signOut } = useAuthActions();
 
   useEffect(() => {
@@ -318,3 +318,4 @@ export function Navbar() {
     </>
   );
 }
+

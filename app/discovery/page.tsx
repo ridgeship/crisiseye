@@ -45,7 +45,7 @@ const DISCOVERY_CATEGORIES = [
 ];
 
 export default function DiscoveryPage() {
-  const feed = useQuery(api.discovery.getDiscoveryFeed);
+  const feed = useQuery(api.discovery.getDiscoveryFeed, {});
   const toggleBookmark = useMutation(api.discovery.toggleBookmark);
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -353,19 +353,19 @@ export default function DiscoveryPage() {
                   {selectedArticle.summary}
                 </div>
 
-                {selectedArticle.actionRequired && (
+                {"actionRequired" in selectedArticle && selectedArticle.actionRequired && (
                   <div className="rounded-lg border border-amber-500/20 bg-amber-500/5 p-4 space-y-1.5">
                     <h4 className="text-xs font-bold uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
                       <AlertTriangle className="size-4" />
                       Required Action & Directive
                     </h4>
-                    <p className="text-xs leading-relaxed text-slate-300">{selectedArticle.actionRequired}</p>
+                    <p className="text-xs leading-relaxed text-slate-300">{"actionRequired" in selectedArticle ? selectedArticle.actionRequired : undefined}</p>
                   </div>
                 )}
               </div>
 
               {/* Expiry alerts for advisories */}
-              {selectedArticle.expiryDate && (
+              {"expiryDate" in selectedArticle && selectedArticle.expiryDate && (
                 <div className="mt-6 text-[10px] text-slate-500 font-mono text-right">
                   Expires: {new Date(selectedArticle.expiryDate).toLocaleString()}
                 </div>
@@ -422,3 +422,4 @@ export default function DiscoveryPage() {
     </ProtectedRoute>
   );
 }
+

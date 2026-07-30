@@ -15,7 +15,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, allowedRoles, fallbackUrl = "/login" }: ProtectedRouteProps) {
   const auth = useConvexAuth() || { isAuthenticated: false, isLoading: true };
   const { isAuthenticated, isLoading: authLoading } = auth;
-  const user = useQuery(api.users.current);
+  const user = useQuery(api.users.current, {});
   const router = useRouter();
 
   useEffect(() => {
@@ -47,3 +47,4 @@ export function ProtectedRoute({ children, allowedRoles, fallbackUrl = "/login" 
 
   return <>{children}</>;
 }
+

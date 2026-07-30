@@ -230,8 +230,8 @@ function OperationsMapController({
 }
 
 export default function ResponderMap() {
-  const user = useQuery(api.users.current)
-  const incidents = useQuery(api.responder.getLiveQueue)
+  const user = useQuery(api.users.current, {})
+  const incidents = useQuery(api.responder.getLiveQueue, {})
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const [mapMode, setMapMode] = useState<"operations" | "public">("operations")
   const [selectedId, setSelectedId] = useState<string | null>(null)
@@ -485,11 +485,9 @@ export default function ResponderMap() {
                 gestureHandling={'greedy'}
                 disableDefaultUI={true}
                 zoomControl={true}
-                options={{
-                  styles: mapMode === "operations" ? darkTacticalStyle : [],
-                  mapTypeControl: false,
-                  streetViewControl: false
-                }}
+                styles={mapMode === "operations" ? darkTacticalStyle : []}
+                mapTypeControl={false}
+                streetViewControl={false}
               >
                 {/* Controller which manages camera transitions */}
                 {mapMode === "operations" && (
@@ -657,4 +655,5 @@ export default function ResponderMap() {
     </div>
   )
 }
+
 

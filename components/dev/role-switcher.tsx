@@ -16,7 +16,7 @@ const ROLES = [
 ]
 
 export function RoleSwitcher() {
-  const user = useQuery(api.users.current)
+  const user = useQuery(api.users.current, {})
   const switchRole = useMutation(api.users.switchRole)
   const [isOpen, setIsOpen] = useState(false)
 
@@ -65,3 +65,4 @@ export function RoleSwitcher() {
     </div>
   )
 }
+

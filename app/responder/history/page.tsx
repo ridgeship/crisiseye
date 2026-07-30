@@ -7,7 +7,7 @@ import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export default function IncidentHistoryPage() {
-  const incidents = useQuery(api.responder.getLiveQueue);
+  const incidents = useQuery(api.responder.getLiveQueue, {});
   const [search, setSearch] = useState("");
 
   if (incidents === undefined) {
@@ -105,3 +105,4 @@ export default function IncidentHistoryPage() {
     </div>
   );
 }
+

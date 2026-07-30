@@ -1,6 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
+import Link from 'next/link'
 import { useMemo, useState } from 'react'
 import {
   Search,
@@ -19,7 +20,6 @@ import {
   type Severity,
 } from '@/lib/data'
 import { useQuery } from 'convex/react'
-// @ts-ignore
 import { api } from '@/convex/_generated/api'
 
 const MapCanvas = dynamic(() => import('@/components/map/map-canvas'), {
@@ -62,7 +62,7 @@ export function MapView() {
   const [agencyFilter, setAgencyFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
 
-  const liveIncidents = useQuery(api.discovery.getPublicMapIncidents) || []
+  const liveIncidents = useQuery(api.discovery.getPublicMapIncidents, {}) || []
 
   const filtered = useMemo(() => {
     return liveIncidents.filter((i: any) => {
@@ -453,4 +453,5 @@ function BookOpen(props: any) {
     </svg>
   )
 }
+
 

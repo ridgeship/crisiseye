@@ -29,7 +29,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ children, role }: DashboardLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { signOut } = useAuthActions();
-  const user = useQuery(api.users.current);
+  const user = useQuery(api.users.current, {});
   const router = useRouter();
   const pathname = usePathname();
 
@@ -115,17 +115,15 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
             </Button>
 
             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="relative h-8 w-8 rounded-full">
+                <DropdownMenuTrigger className="relative flex h-8 w-8 items-center justify-center rounded-full hover:bg-muted">
                   <Avatar className="h-8 w-8 border border-border">
                     <AvatarImage src={user?.image} alt={user?.name || "User"} />
                     <AvatarFallback className="bg-primary/10 text-primary">
                       {user?.name?.charAt(0) || <User className="h-4 w-4" />}
                     </AvatarFallback>
                   </Avatar>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-56" align="end" forceMount>
+                </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-56" align="end">
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">{user?.name || "User"}</p>
@@ -163,3 +161,4 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
     </div>
   );
 }
+

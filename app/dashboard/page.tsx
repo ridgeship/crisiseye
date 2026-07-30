@@ -17,7 +17,9 @@ import {
   ExternalLink,
   Info,
   Calendar,
-  AlertCircle
+  AlertCircle,
+  MapPin,
+  BookmarkCheck
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -39,10 +41,10 @@ import { CATEGORY_META, type IncidentCategory } from "@/lib/data";
 const CATEGORY_KEYS = Object.keys(CATEGORY_META) as IncidentCategory[];
 
 export default function DashboardPage() {
-  const user = useQuery(api.users.current);
-  const incidents = useQuery(api.incidents.getIncidents);
-  const bookmarks = useQuery(api.discovery.getBookmarks);
-  const notifications = useQuery(api.discovery.getNotifications);
+  const user = useQuery(api.users.current, {});
+  const incidents = useQuery(api.incidents.getIncidents, {});
+  const bookmarks = useQuery(api.discovery.getBookmarks, {});
+  const notifications = useQuery(api.discovery.getNotifications, {});
   const markRead = useMutation(api.discovery.markNotificationRead);
   const toggleBookmark = useMutation(api.discovery.toggleBookmark);
 
@@ -396,3 +398,4 @@ export default function DashboardPage() {
     </div>
   );
 }
+

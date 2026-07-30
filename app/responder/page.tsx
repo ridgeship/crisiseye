@@ -19,9 +19,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 export default function ResponderOverview() {
-  const user = useQuery(api.users.current);
-  const stats = useQuery(api.responder.getStats);
-  const incidents = useQuery(api.responder.getLiveQueue);
+  const user = useQuery(api.users.current, {});
+  const stats = useQuery(api.responder.getStats, {});
+  const incidents = useQuery(api.responder.getLiveQueue, {});
 
   // Derive counts
   const total = stats?.total ?? 0;
@@ -241,4 +241,5 @@ export default function ResponderOverview() {
     </div>
   )
 }
+
 

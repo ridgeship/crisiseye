@@ -52,7 +52,7 @@ const NAV_ITEMS = [
 
 export default function ResponderLayout({ children }: { children: React.ReactNode }) {
   const { signOut } = useAuthActions();
-  const user = useQuery(api.users.current);
+  const user = useQuery(api.users.current, {});
   const router = useRouter();
   const pathname = usePathname();
   const [time, setTime] = useState<Date | null>(null);
@@ -316,3 +316,4 @@ export default function ResponderLayout({ children }: { children: React.ReactNod
     </ProtectedRoute>
   );
 }
+
