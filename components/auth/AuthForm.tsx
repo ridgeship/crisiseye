@@ -6,8 +6,6 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
-import { useConvex } from "convex/react";
-import { api } from "@/convex/_generated/api";
 
 type AuthFlow = "login" | "register" | "responder-login" | "admin-login";
 
@@ -25,9 +23,9 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
   const [name, setName] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { signIn, signOut } = useAuthActions();
+  const { signIn } = useAuthActions();
   const router = useRouter();
-  const convex = useConvex();
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,29 +75,22 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
         try {
           await signIn("password", { email: finalEmail, password, flow: "signIn" });
         } catch (err) {
-          // If sign-in fails and it's a responder login, attempt auto-signup with the password (e.g. 12345)
+          // If sign-in fails and it's a responder login, attempt auto-registration on first use
           if (flow === "responder-login" || finalEmail.endsWith("@crisiseye.gov")) {
             console.log("Responder account not found, auto-registering...");
-            await signIn("password", { name: finalName, email: finalEmail, password, flow: "signUp", role: finalRole });
+            await signIn("password", {
+              name: finalName,
+              email: finalEmail,
+              password,
+              flow: "signUp",
+              role: finalRole,
+            });
           } else {
             throw err;
           }
         }
-
-        const user = await convex.query(api.users.current);
-        if (user) {
-          const userRole = user.role || "citizen";
-          const isAuthorized = 
-            (flow === "responder-login" && userRole !== "citizen") ||
-            (flow === "admin-login" && userRole === "admin") ||
-            (flow === "login" && userRole === "citizen");
-            
-          if (!isAuthorized) {
-            // Sign out the unauthorized user
-            await signOut();
-            throw new Error(`Account not authorized for ${flow.replace("-", " ")}`);
-          }
-        }
+        // signIn resolves once the session token is set — redirect immediately.
+        // Role-based access is enforced at the destination page via ProtectedRoute / server checks.
         router.push(redirectUrl);
       }
     } catch (error) {

@@ -11,16 +11,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable
+
       - name: Use Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
           cache: "pnpm"
-      - name: Install pnpm
-        run: npm i -g pnpm
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+
       - name: Check Client Hooks
         run: bash scripts/check-client-hooks.sh
+
       - name: Build
         run: pnpm run build
+        env:
+          # Suppress missing env vars during CI build — runtime values come from Vercel
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.NEXT_PUBLIC_CONVEX_URL || 'https://placeholder.convex.cloud' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY || 'placeholder' }}
+          NEXT_PUBLIC_GOOGLE_MAPS_API_KEY: ${{ secrets.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || 'placeholder' }}
