@@ -62,9 +62,7 @@ export function MapView() {
   const [agencyFilter, setAgencyFilter] = useState<string>("all")
   const [typeFilter, setTypeFilter] = useState<string>("all")
 
-  // Safely query — if the backend function is missing (e.g. not yet deployed) return [] instead of crashing
-  const liveIncidentsRaw = useQuery(api.discovery.getPublicMapIncidents)
-  const liveIncidents = liveIncidentsRaw ?? []
+  const liveIncidents = useQuery(api.discovery.getPublicMapIncidents) || []
 
   const filtered = useMemo(() => {
     return liveIncidents.filter((i: any) => {
