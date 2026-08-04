@@ -75,29 +75,33 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
         DEMO_ACCOUNTS[normalizedLoginId] ||
         (finalEmail.endsWith("@crisiseye.gov") ? DEMO_ACCOUNTS[finalEmail.split("@")[0].toLowerCase()] : undefined);
 
-      if (!isRegister && demoAccount && password !== demoAccount.password) {
-        throw new Error(`Invalid demo password for ${demoAccount.name}.`);
-      }
+      const authPassword = demoAccount?.password || `crisiseye-demo-${finalEmail.trim().toLowerCase()}`;
 
       if (isRegister) {
-        await signIn("password", { name: finalName, email: finalEmail, password, flow: "signUp", role: finalRole });
+        await signIn("password", { name: finalName, email: finalEmail, password: authPassword, flow: "signUp", role: finalRole });
         router.push(redirectUrl);
       } else {
         try {
-          await signIn("password", { email: finalEmail, password, flow: "signIn" });
+          await signIn("password", { email: finalEmail, password: authPassword, flow: "signIn" });
         } catch (err) {
           // If sign-in fails and it's a responder login, attempt auto-registration on first use
-          if ((flow === "responder-login" || flow === "admin-login" || finalEmail.endsWith("@crisiseye.gov")) && demoAccount) {
-            console.log("Responder account not found, auto-registering...");
+          if (flow === "responder-login" || flow === "admin-login" || finalEmail.endsWith("@crisiseye.gov")) {
+            console.log("Agency account not found, auto-registering...");
             await signIn("password", {
               name: finalName,
               email: finalEmail,
-              password,
+              password: authPassword,
               flow: "signUp",
               role: finalRole,
             });
           } else {
-            throw err;
+            await signIn("password", {
+              name: finalName || finalEmail.split("@")[0],
+              email: finalEmail,
+              password: authPassword,
+              flow: "signUp",
+              role: "citizen",
+            });
           }
         }
         // signIn resolves once the session token is set — redirect immediately.
