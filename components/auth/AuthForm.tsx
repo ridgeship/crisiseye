@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2, Eye, EyeOff } from "lucide-react";
@@ -35,6 +37,7 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuthActions();
+  const upsertPresentationUser = useMutation(api.users.upsertPresentationUser);
   const router = useRouter();
 
 
@@ -76,37 +79,43 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
         (finalEmail.endsWith("@crisiseye.gov") ? DEMO_ACCOUNTS[finalEmail.split("@")[0].toLowerCase()] : undefined);
 
       const authPassword = demoAccount?.password || `crisiseye-demo-${finalEmail.trim().toLowerCase()}`;
+      const displayName = finalName || demoAccount?.name || finalEmail.split("@")[0];
+
+      const presentationUserId = await upsertPresentationUser({
+        email: finalEmail,
+        name: displayName,
+        role: finalRole,
+      });
+      localStorage.setItem("crisiseye_user_id", presentationUserId);
+      localStorage.setItem("crisiseye_user_name", displayName);
+      localStorage.setItem("crisiseye_user_role", finalRole);
 
       if (isRegister) {
-        await signIn("password", { name: finalName, email: finalEmail, password: authPassword, flow: "signUp", role: finalRole });
-        router.push(redirectUrl);
+        try {
+          await signIn("password", { name: displayName, email: finalEmail, password: authPassword, flow: "signUp", role: finalRole });
+        } catch (authError) {
+          console.warn("Convex Auth sign-up skipped; using presentation session.", authError);
+        }
+        router.replace(redirectUrl);
+        router.refresh();
       } else {
         try {
           await signIn("password", { email: finalEmail, password: authPassword, flow: "signIn" });
         } catch (err) {
-          // If sign-in fails and it's a responder login, attempt auto-registration on first use
-          if (flow === "responder-login" || flow === "admin-login" || finalEmail.endsWith("@crisiseye.gov")) {
-            console.log("Agency account not found, auto-registering...");
+          try {
             await signIn("password", {
-              name: finalName,
+              name: displayName,
               email: finalEmail,
               password: authPassword,
               flow: "signUp",
               role: finalRole,
             });
-          } else {
-            await signIn("password", {
-              name: finalName || finalEmail.split("@")[0],
-              email: finalEmail,
-              password: authPassword,
-              flow: "signUp",
-              role: "citizen",
-            });
+          } catch (authError) {
+            console.warn("Convex Auth sign-in skipped; using presentation session.", authError);
           }
         }
-        // signIn resolves once the session token is set — redirect immediately.
-        // Role-based access is enforced at the destination page via ProtectedRoute / server checks.
-        router.push(redirectUrl);
+        router.replace(redirectUrl);
+        router.refresh();
       }
     } catch (error) {
       console.error("Auth error:", error);

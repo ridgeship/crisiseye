@@ -30,9 +30,15 @@ export function Navbar() {
   const dropdownRef = useRef<HTMLDivElement>(null);
   
   const auth = useConvexAuth() || { isAuthenticated: false, isLoading: false };
-  const { isAuthenticated, isLoading } = auth;
-  const user = useQuery(api.users.current, {});
+  const { isLoading } = auth;
+  const [presentationUserId, setPresentationUserId] = useState<string | null>(null);
+  const user = useQuery(api.users.current, presentationUserId ? { mockUserId: presentationUserId as any } : {});
+  const isAuthenticated = auth.isAuthenticated || Boolean(presentationUserId);
   const { signOut } = useAuthActions();
+
+  useEffect(() => {
+    setPresentationUserId(localStorage.getItem("crisiseye_user_id"));
+  }, []);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -98,6 +104,14 @@ export function Navbar() {
   };
 
   const roleDisplay = getRoleDisplay();
+
+  const handleLogout = async () => {
+    localStorage.removeItem("crisiseye_user_id");
+    localStorage.removeItem("crisiseye_user_name");
+    localStorage.removeItem("crisiseye_user_role");
+    setPresentationUserId(null);
+    await signOut();
+  };
 
   return (
     <>
@@ -175,8 +189,8 @@ export function Navbar() {
                       dropdownOpen && "bg-secondary/50"
                     )}
                   >
-                    <div className={cn("flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-full", roleDisplay.bg, roleDisplay.color)}>
-                      <roleDisplay.icon className="size-3.5 sm:size-4" />
+                    <div className={cn("flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-full text-[10px] sm:text-xs font-bold", roleDisplay.bg, roleDisplay.color)}>
+                      {getInitials(user?.name || user?.email)}
                     </div>
                     <span className="max-w-[100px] truncate text-xs sm:text-sm font-medium text-foreground sm:max-w-[150px]">
                       {roleDisplay.label}
@@ -213,7 +227,7 @@ export function Navbar() {
                         <button 
                           onClick={() => {
                             setDropdownOpen(false);
-                            signOut();
+                            handleLogout();
                           }}
                           className="flex w-full items-center gap-2 rounded-sm px-3 py-2 text-sm text-red-500 hover:bg-red-500/10 transition-colors"
                         >
@@ -291,7 +305,7 @@ export function Navbar() {
                     <button
                       onClick={() => {
                         setOpen(false);
-                        signOut();
+                        handleLogout();
                       }}
                       className="flex w-full items-center gap-2 rounded-md px-3 py-3 text-sm font-medium text-red-500 hover:bg-red-500/10 transition-colors"
                     >

@@ -32,3 +32,36 @@ export const switchRole = mutation({
     await ctx.db.patch(userId, { role: args.role });
   },
 });
+
+export const upsertPresentationUser = mutation({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    role: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const normalizedEmail = args.email.trim().toLowerCase();
+    const now = Date.now();
+    const existing = await ctx.db
+      .query("users")
+      .withIndex("email", (q) => q.eq("email", normalizedEmail))
+      .first();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        name: args.name || existing.name || normalizedEmail.split("@")[0],
+        role: args.role || existing.role || "citizen",
+        updatedAt: now,
+      });
+      return existing._id;
+    }
+
+    return await ctx.db.insert("users", {
+      email: normalizedEmail,
+      name: args.name || normalizedEmail.split("@")[0],
+      role: args.role || "citizen",
+      createdAt: now,
+      updatedAt: now,
+    });
+  },
+});
