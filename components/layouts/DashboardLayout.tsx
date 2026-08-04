@@ -20,6 +20,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { clearPresentationSession } from "@/lib/presentation-session";
 
 interface DashboardLayoutProps {
   children: React.ReactNode;
@@ -34,6 +35,7 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
   const pathname = usePathname();
 
   const handleSignOut = async () => {
+    clearPresentationSession();
     await signOut();
     router.push("/login");
   };
@@ -161,4 +163,3 @@ export function DashboardLayout({ children, role }: DashboardLayoutProps) {
     </div>
   );
 }
-

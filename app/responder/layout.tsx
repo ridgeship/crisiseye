@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { clearPresentationSession } from "@/lib/presentation-session";
 
 const NAV_ITEMS = [
   { href: "/responder", label: "Dashboard", icon: LayoutDashboard },
@@ -66,6 +67,7 @@ export default function ResponderLayout({ children }: { children: React.ReactNod
   }, []);
 
   const handleSignOut = async () => {
+    clearPresentationSession();
     await signOut();
     router.push("/responder-login");
   };
@@ -316,4 +318,3 @@ export default function ResponderLayout({ children }: { children: React.ReactNod
     </ProtectedRoute>
   );
 }
-

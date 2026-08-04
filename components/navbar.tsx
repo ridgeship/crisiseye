@@ -12,6 +12,7 @@ import { api } from "@/convex/_generated/api";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { motion, AnimatePresence } from "framer-motion";
+import { clearPresentationSession, readPresentationSession } from "@/lib/presentation-session";
 
 const NAV_LINKS = [
   { href: "/", label: "Home" },
@@ -31,13 +32,14 @@ export function Navbar() {
   
   const auth = useConvexAuth() || { isAuthenticated: false, isLoading: false };
   const { isLoading } = auth;
-  const [presentationUserId, setPresentationUserId] = useState<string | null>(null);
-  const user = useQuery(api.users.current, presentationUserId ? { mockUserId: presentationUserId as any } : {});
-  const isAuthenticated = auth.isAuthenticated || Boolean(presentationUserId);
+  const [presentationUser, setPresentationUser] = useState<ReturnType<typeof readPresentationSession>>(null);
+  const user = useQuery(api.users.current, {});
+  const effectiveUser = user || presentationUser;
+  const isAuthenticated = auth.isAuthenticated || Boolean(presentationUser);
   const { signOut } = useAuthActions();
 
   useEffect(() => {
-    setPresentationUserId(localStorage.getItem("crisiseye_user_id"));
+    setPresentationUser(readPresentationSession());
   }, []);
 
   useEffect(() => {
@@ -74,7 +76,7 @@ export function Navbar() {
   const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  const isResponder = user && user.role !== "citizen";
+  const isResponder = Boolean(effectiveUser && effectiveUser.role !== "citizen");
 
   const getInitials = (name?: string) => {
     if (!name) return "U";
@@ -84,32 +86,30 @@ export function Navbar() {
   };
 
   const getRoleDisplay = () => {
-    if (isLoading || (isAuthenticated && user === undefined)) {
+    if (isLoading || (auth.isAuthenticated && user === undefined)) {
       return { label: "Loading...", icon: UserRound, color: "text-slate-400", bg: "bg-slate-800" };
     }
     if (!isAuthenticated) return null;
     
-    if (!user) {
+    if (!effectiveUser) {
       return { label: "Account", icon: UserRound, color: "text-slate-400", bg: "bg-slate-800" };
     }
-    switch (user.role) {
+    switch (effectiveUser.role) {
       case "police": return { label: "Police Officer", icon: ShieldCheck, color: "text-blue-500", bg: "bg-blue-500/10" };
       case "fire": return { label: "Fire Service", icon: Flame, color: "text-orange-500", bg: "bg-orange-500/10" };
       case "ambulance": return { label: "Ambulance", icon: Ambulance, color: "text-emerald-500", bg: "bg-emerald-500/10" };
       case "nadmo": return { label: "NADMO", icon: Shield, color: "text-amber-500", bg: "bg-amber-500/10" };
       case "ecg": return { label: "ECG", icon: Zap, color: "text-yellow-500", bg: "bg-yellow-500/10" };
       case "admin": return { label: "Administrator", icon: UserCog, color: "text-purple-500", bg: "bg-purple-500/10" };
-      default: return { label: user.name || "Citizen", icon: UserRound, color: "text-slate-400", bg: "bg-slate-800" };
+      default: return { label: effectiveUser.name || "Citizen", icon: UserRound, color: "text-slate-400", bg: "bg-slate-800" };
     }
   };
 
   const roleDisplay = getRoleDisplay();
 
   const handleLogout = async () => {
-    localStorage.removeItem("crisiseye_user_id");
-    localStorage.removeItem("crisiseye_user_name");
-    localStorage.removeItem("crisiseye_user_role");
-    setPresentationUserId(null);
+    clearPresentationSession();
+    setPresentationUser(null);
     await signOut();
   };
 
@@ -190,7 +190,7 @@ export function Navbar() {
                     )}
                   >
                     <div className={cn("flex size-6 sm:size-7 shrink-0 items-center justify-center rounded-full text-[10px] sm:text-xs font-bold", roleDisplay.bg, roleDisplay.color)}>
-                      {getInitials(user?.name || user?.email)}
+                      {getInitials(effectiveUser?.name || effectiveUser?.email)}
                     </div>
                     <span className="max-w-[100px] truncate text-xs sm:text-sm font-medium text-foreground sm:max-w-[150px]">
                       {roleDisplay.label}
@@ -332,4 +332,3 @@ export function Navbar() {
     </>
   );
 }
-
