@@ -9,6 +9,17 @@ import Image from "next/image";
 
 type AuthFlow = "login" | "register" | "responder-login" | "admin-login";
 
+const DEMO_ACCOUNTS: Record<string, { email: string; name: string; role: string; password: string }> = {
+  police: { email: "police@crisiseye.gov", name: "Police Service", role: "police", password: "POLICE123" },
+  fire: { email: "fire@crisiseye.gov", name: "Fire Service", role: "fire", password: "FIRE123" },
+  ambulance: { email: "ambulance@crisiseye.gov", name: "Ambulance Service", role: "ambulance", password: "AMBULANCE123" },
+  nadmo: { email: "nadmo@crisiseye.gov", name: "NADMO", role: "nadmo", password: "NADMO123" },
+  ecg: { email: "ecg@crisiseye.gov", name: "ECG", role: "ecg", password: "ECG123" },
+  gwc: { email: "gwa@crisiseye.gov", name: "Ghana Water", role: "gwa", password: "GWA123" },
+  gwa: { email: "gwa@crisiseye.gov", name: "Ghana Water", role: "gwa", password: "GWA123" },
+  admin: { email: "admin@crisiseye.gov", name: "Admin Operations", role: "admin", password: "ADMIN123" },
+};
+
 interface AuthFormProps {
   flow: AuthFlow;
   title: string;
@@ -35,23 +46,15 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
     let finalRole = flow === "responder-login" ? "responder" : flow === "admin-login" ? "admin" : "citizen";
     let finalName = name;
 
-    if (flow === "responder-login") {
-      const id = email.trim().toLowerCase();
-      const responderMap: Record<string, { email: string, name: string, role: string }> = {
-        police: { email: "police@crisiseye.gov", name: "Police Service", role: "police" },
-        fire: { email: "fire@crisiseye.gov", name: "Fire Service", role: "fire" },
-        ambulance: { email: "ambulance@crisiseye.gov", name: "Ambulance Service", role: "ambulance" },
-        nadmo: { email: "nadmo@crisiseye.gov", name: "NADMO", role: "nadmo" },
-        ecg: { email: "ecg@crisiseye.gov", name: "ECG", role: "ecg" },
-        gwc: { email: "gwa@crisiseye.gov", name: "Ghana Water", role: "gwa" },
-        gwa: { email: "gwa@crisiseye.gov", name: "Ghana Water", role: "gwa" },
-        admin: { email: "admin@crisiseye.gov", name: "Admin Operations", role: "admin" },
-      };
+    const normalizedLoginId = email.trim().toLowerCase();
 
-      if (responderMap[id]) {
-        finalEmail = responderMap[id].email;
-        finalRole = responderMap[id].role;
-        finalName = responderMap[id].name;
+    if (flow === "responder-login" || flow === "admin-login") {
+      const id = email.trim().toLowerCase();
+
+      if (DEMO_ACCOUNTS[id]) {
+        finalEmail = DEMO_ACCOUNTS[id].email;
+        finalRole = DEMO_ACCOUNTS[id].role;
+        finalName = DEMO_ACCOUNTS[id].name;
       } else if (!email.includes("@")) {
         // Fallback for custom responder IDs
         finalEmail = `${id}@crisiseye.gov`;
@@ -61,13 +64,21 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
     } else if (flow === "login" && email.includes("@")) {
       // If logging in as citizen but typing a responder email, handle it gracefully
       const prefix = email.split("@")[0].toLowerCase();
-      const validRoles = ["police", "fire", "ambulance", "nadmo", "ecg", "gwa", "admin"];
+      const validRoles = Object.keys(DEMO_ACCOUNTS);
       if (validRoles.includes(prefix) && email.endsWith("@crisiseye.gov")) {
-        finalRole = prefix;
+        finalRole = DEMO_ACCOUNTS[prefix].role;
       }
     }
 
     try {
+      const demoAccount =
+        DEMO_ACCOUNTS[normalizedLoginId] ||
+        (finalEmail.endsWith("@crisiseye.gov") ? DEMO_ACCOUNTS[finalEmail.split("@")[0].toLowerCase()] : undefined);
+
+      if (!isRegister && demoAccount && password !== demoAccount.password) {
+        throw new Error(`Invalid demo password for ${demoAccount.name}.`);
+      }
+
       if (isRegister) {
         await signIn("password", { name: finalName, email: finalEmail, password, flow: "signUp", role: finalRole });
         router.push(redirectUrl);
@@ -76,7 +87,7 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
           await signIn("password", { email: finalEmail, password, flow: "signIn" });
         } catch (err) {
           // If sign-in fails and it's a responder login, attempt auto-registration on first use
-          if (flow === "responder-login" || finalEmail.endsWith("@crisiseye.gov")) {
+          if ((flow === "responder-login" || flow === "admin-login" || finalEmail.endsWith("@crisiseye.gov")) && demoAccount) {
             console.log("Responder account not found, auto-registering...");
             await signIn("password", {
               name: finalName,

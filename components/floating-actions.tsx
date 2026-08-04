@@ -56,15 +56,16 @@ export function FloatingActions() {
   const sendReport = async (type: string, isUnknown = false) => {
     try {
       await enqueueReport({
-        type: type,
+        incidentType: type,
         description: isUnknown ? "Auto-dispatched via SOS timeout" : "Dispatched via SOS",
-        severity: "Critical",
+        severity: "critical",
         location: {
           lat: location?.lat || 0,
           lng: location?.lng || 0,
           address: "SOS Location",
           isApproximate: location?.isApproximate || false
-        }
+        },
+        privacyPreference: "private",
       })
     } catch (error) {
       console.error(error)

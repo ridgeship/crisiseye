@@ -93,8 +93,8 @@ export function OfflineQueueProvider({ children }: { children: ReactNode }) {
     if (!isOffline) {
       try {
         await reportIncident(payload)
-        if (payload.type !== "Unknown Emergency") {
-          alert(`SOS Dispatched: ${payload.type}`)
+        if (payload.incidentType !== "Unknown Emergency") {
+          alert(`SOS Dispatched: ${payload.incidentType}`)
         }
         return
       } catch (e) {
