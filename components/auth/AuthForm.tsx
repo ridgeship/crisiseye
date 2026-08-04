@@ -2,12 +2,11 @@
 
 import { useState } from "react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation } from "convex/react";
-import { api } from "@/convex/_generated/api";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
+import { createPresentationSession, savePresentationSession } from "@/lib/presentation-session";
 
 type AuthFlow = "login" | "register" | "responder-login" | "admin-login";
 
@@ -37,7 +36,6 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuthActions();
-  const upsertPresentationUser = useMutation(api.users.upsertPresentationUser);
   const router = useRouter();
 
 
@@ -45,8 +43,8 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
     e.preventDefault();
     setLoading(true);
     
-    let finalEmail = email;
-    let finalRole = flow === "responder-login" ? "responder" : flow === "admin-login" ? "admin" : "citizen";
+    let finalEmail = email.trim();
+    let finalRole = flow === "responder-login" ? "police" : flow === "admin-login" ? "admin" : "citizen";
     let finalName = name;
 
     const normalizedLoginId = email.trim().toLowerCase();
@@ -58,11 +56,11 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
         finalEmail = DEMO_ACCOUNTS[id].email;
         finalRole = DEMO_ACCOUNTS[id].role;
         finalName = DEMO_ACCOUNTS[id].name;
-      } else if (!email.includes("@")) {
-        // Fallback for custom responder IDs
-        finalEmail = `${id}@crisiseye.gov`;
-        finalRole = "responder";
-        finalName = email;
+      } else {
+        // Fallback for custom responder/admin IDs
+        finalEmail = id.includes("@") ? id : `${id}@crisiseye.gov`;
+        finalRole = flow === "admin-login" ? "admin" : "police";
+        finalName = email.trim();
       }
     } else if (flow === "login" && email.includes("@")) {
       // If logging in as citizen but typing a responder email, handle it gracefully
@@ -71,6 +69,8 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
       if (validRoles.includes(prefix) && email.endsWith("@crisiseye.gov")) {
         finalRole = DEMO_ACCOUNTS[prefix].role;
       }
+    } else if (!finalEmail.includes("@")) {
+      finalEmail = `${finalEmail.toLowerCase()}@citizen.local`;
     }
 
     try {
@@ -80,15 +80,12 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
 
       const authPassword = demoAccount?.password || `crisiseye-demo-${finalEmail.trim().toLowerCase()}`;
       const displayName = finalName || demoAccount?.name || finalEmail.split("@")[0];
-
-      const presentationUserId = await upsertPresentationUser({
+      const session = createPresentationSession({
         email: finalEmail,
         name: displayName,
         role: finalRole,
       });
-      localStorage.setItem("crisiseye_user_id", presentationUserId);
-      localStorage.setItem("crisiseye_user_name", displayName);
-      localStorage.setItem("crisiseye_user_role", finalRole);
+      savePresentationSession(session);
 
       if (isRegister) {
         try {
@@ -180,13 +177,13 @@ export function AuthForm({ flow, title, subtitle, redirectUrl }: AuthFormProps) 
               <input
                 id={flow === "responder-login" ? "responder-id" : "email-address"}
                 name="email"
-                type={flow === "responder-login" ? "text" : "email"}
+                type="text"
                 autoComplete={flow === "responder-login" ? "username" : "email"}
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="relative block w-full rounded-md border border-border/60 bg-background/50 px-3 py-2 text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm transition-colors"
-                placeholder={flow === "responder-login" ? "Responder ID (e.g. Police, ECG, Fire)" : "Email address"}
+                placeholder={flow === "responder-login" ? "Responder ID (e.g. Police, ECG, Fire)" : "Email or username"}
               />
             </div>
             <div className="relative">
