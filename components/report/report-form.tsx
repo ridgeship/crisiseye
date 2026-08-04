@@ -41,6 +41,25 @@ type LocationState = {
   status: 'idle' | 'locating' | 'ready' | 'error'
 }
 
+const HIGH_ACCURACY_GEO_OPTIONS: PositionOptions = {
+  enableHighAccuracy: true,
+  timeout: 15000,
+  maximumAge: 0,
+}
+
+const FALLBACK_GEO_OPTIONS: PositionOptions = {
+  enableHighAccuracy: false,
+  timeout: 20000,
+  maximumAge: 120000,
+}
+
+function hasUsableCoordinates(location: Pick<LocationState, 'lat' | 'lng'>) {
+  if (typeof location.lat !== 'number' || typeof location.lng !== 'number') return false
+  if (!Number.isFinite(location.lat) || !Number.isFinite(location.lng)) return false
+  // Prevent placeholder coordinates from being treated as a valid point.
+  return !(location.lat === 0 && location.lng === 0)
+}
+
 function VoiceRecorder({ onRecord }: { onRecord: (blob: Blob | null) => void }) {
   const [isRecording, setIsRecording] = useState(false);
   const [audioURL, setAudioURL] = useState<string | null>(null);
@@ -147,33 +166,52 @@ export function ReportForm() {
     address: '',
     status: 'idle',
   })
-  const [privacyPreference, setPrivacyPreference] = useState<'private' | 'allow_publication'>('private')
   const [incidentId, setIncidentId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // @ts-ignore
   const reportIncident = useMutation(api.incidents.reportIncident);
 
-  const useCurrentLocation = () => {
-    setLocation((l) => ({ ...l, mode: 'auto', status: 'locating' }))
+  const getCurrentCoordinates = async () => {
     if (!('geolocation' in navigator)) {
-      setLocation((l) => ({ ...l, status: 'error' }))
-      return
+      throw new Error('Geolocation is not supported on this device.')
     }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const { latitude, longitude } = pos.coords
-        setLocation({
-          mode: 'auto',
-          lat: latitude,
-          lng: longitude,
-          address: `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
-          status: 'ready',
-        })
-      },
-      () => setLocation((l) => ({ ...l, status: 'error' })),
-    )
+
+    const resolvePosition = (options: PositionOptions) =>
+      new Promise<GeolocationPosition>((resolve, reject) => {
+        navigator.geolocation.getCurrentPosition(resolve, reject, options)
+      })
+
+    try {
+      const pos = await resolvePosition(HIGH_ACCURACY_GEO_OPTIONS)
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude }
+    } catch {
+      const pos = await resolvePosition(FALLBACK_GEO_OPTIONS)
+      return { lat: pos.coords.latitude, lng: pos.coords.longitude }
+    }
   }
+
+  const useCurrentLocation = async () => {
+    setLocation((l) => ({ ...l, mode: 'auto', status: 'locating' }))
+    try {
+      const { lat, lng } = await getCurrentCoordinates()
+      setLocation({
+        mode: 'auto',
+        lat,
+        lng,
+        address: `${lat.toFixed(5)}, ${lng.toFixed(5)}`,
+        status: 'ready',
+      })
+    } catch {
+      setLocation((l) => ({ ...l, status: 'error' }))
+    }
+  }
+
+  useEffect(() => {
+    void useCurrentLocation()
+    // Run once so the user has coordinates ready without extra taps.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const onFiles = async (list: FileList | null) => {
     if (!list || list.length === 0) return
@@ -182,10 +220,10 @@ export function ReportForm() {
       return;
     }
 
-    const newFiles = Array.from(list).filter(f => f.type.startsWith('image/')).slice(0, 5);
+    const newFiles = Array.from(list).filter((f) => f.type.startsWith('image/')).slice(0, 5)
     if (newFiles.length === 0) {
-      setFiles(prev => [...prev, ...Array.from(list)].slice(0, 5));
-      return;
+      alert("Only image files are currently supported for AI verification.")
+      return
     }
     
     setAnalyzingMedia(true);
@@ -200,49 +238,76 @@ export function ReportForm() {
     setRejectedFiles([]);
 
     try {
-      // Send the first image to our secure server-side API route
-      const formData = new FormData();
-      formData.append('image', newFiles[0]);
-      formData.append('category', CATEGORY_META[category!].label);
+      const acceptedFiles: File[] = []
+      const rejected: File[] = []
+      const allLabels = new Set<string>()
+      let manualReviewRequired = false
+      let spamDetected = false
+      let confidenceSum = 0
+      let confidenceCount = 0
+      const aiNotes: string[] = []
 
-      const response = await fetch('/api/verify-incident', {
-        method: 'POST',
-        body: formData,
-      });
+      for (const image of newFiles) {
+        const formData = new FormData()
+        formData.append('image', image)
+        formData.append('category', CATEGORY_META[category!].label)
 
-      if (!response.ok) {
-        throw new Error('Verification API returned an error');
-      }
+        const response = await fetch('/api/verify-incident', {
+          method: 'POST',
+          body: formData,
+        })
 
-      const result = await response.json();
-
-      // Store AI metadata for submission
-      const confidence = Math.round((result.confidenceScore ?? 0) * 100);
-      setAiConfidence(confidence);
-      setAiLabels(result.detectedLabels ?? []);
-      setAiManualReview(!!result.requiresManualReview);
-      setAiSpamOrMeme(!!result.isMemeOrSpam);
-
-      if (result.isMemeOrSpam || !result.isEmergencyRelated) {
-        // Rejected - do NOT add to files, store in rejectedFiles and show warning
-        setMediaStatus("Rejected");
-        setAiSummary(result.rejectionReason || "Content does not appear to show a valid emergency.");
-        setEvidenceConfidence("Low");
-        setRejectedFiles(newFiles);
-      } else {
-        setFiles(prev => [...prev, ...newFiles].slice(0, 5));
-        setRejectedFiles([]);
-        if (result.requiresManualReview) {
-          setMediaStatus("Needs Manual Review");
-          setAiSummary(result.rejectionReason || "Image flagged for manual review by a responder.");
-          setEvidenceConfidence("Low");
-        } else {
-          setMediaStatus("Relevant");
-          setAiSummary(`AI verified. Confidence: ${confidence}%. Detected: ${(result.detectedLabels ?? []).join(', ')}`);
-          setEvidenceConfidence("High");
+        if (!response.ok) {
+          const errPayload = await response.json().catch(() => null)
+          const errText = errPayload?.error || "Verification API returned an error."
+          throw new Error(errText)
         }
+
+        const result = await response.json()
+        const confidence = Math.round((result.confidenceScore ?? 0) * 100)
+        confidenceSum += confidence
+        confidenceCount += 1
+
+        ;(result.detectedLabels ?? []).forEach((label: string) => allLabels.add(label))
+
+        if (result.isMemeOrSpam || !result.isEmergencyRelated) {
+          rejected.push(image)
+          spamDetected = spamDetected || Boolean(result.isMemeOrSpam)
+          aiNotes.push(`${image.name}: ${result.rejectionReason || "Rejected as non-emergency content."}`)
+          continue
+        }
+
+        if (result.requiresManualReview) {
+          manualReviewRequired = true
+          aiNotes.push(`${image.name}: Flagged for manual review.`)
+        }
+
+        acceptedFiles.push(image)
       }
 
+      if (acceptedFiles.length > 0) {
+        setFiles((prev) => [...prev, ...acceptedFiles].slice(0, 5))
+      }
+
+      setRejectedFiles(rejected)
+      setAiLabels(Array.from(allLabels))
+      setAiSpamOrMeme(spamDetected)
+      setAiManualReview(manualReviewRequired || rejected.length > 0)
+      setAiConfidence(confidenceCount > 0 ? Math.round(confidenceSum / confidenceCount) : null)
+
+      if (acceptedFiles.length === 0 && rejected.length > 0) {
+        setMediaStatus("Rejected")
+        setEvidenceConfidence("Low")
+        setAiSummary(aiNotes.join(" "))
+      } else if (manualReviewRequired || rejected.length > 0) {
+        setMediaStatus("Needs Manual Review")
+        setEvidenceConfidence("Low")
+        setAiSummary(aiNotes.join(" ") || "Some media requires responder confirmation.")
+      } else {
+        setMediaStatus("Relevant")
+        setEvidenceConfidence("High")
+        setAiSummary("AI verified all uploaded images as emergency-relevant.")
+      }
     } catch (err) {
       console.error("Vision API Error:", err);
       // Graceful fallback - allow submission with manual review flag
@@ -260,7 +325,6 @@ export function ReportForm() {
   const canSubmit =
     !!category &&
     description.trim().length > 4 &&
-    (location.mode === 'manual' ? location.address.trim().length > 2 : location.status === 'ready') &&
     confirmed
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -269,18 +333,40 @@ export function ReportForm() {
     setSubmitting(true)
     
     try {
+      let resolvedLocation = location
+
+      if (!hasUsableCoordinates(resolvedLocation)) {
+        const coords = await getCurrentCoordinates()
+        resolvedLocation = {
+          ...resolvedLocation,
+          mode: 'auto',
+          lat: coords.lat,
+          lng: coords.lng,
+          address: resolvedLocation.address.trim() || `${coords.lat.toFixed(5)}, ${coords.lng.toFixed(5)}`,
+          status: 'ready',
+        }
+        setLocation(resolvedLocation)
+      }
+
+      if (!hasUsableCoordinates(resolvedLocation)) {
+        alert("Couldn't capture your live location. Please enable location services and try again.");
+        setSubmitting(false)
+        return
+      }
+
       const id = await reportIncident({
         incidentType: CATEGORY_META[category!].label,
         description: description,
         severity: SEVERITY_META[severity].label,
         location: {
-          lat: location.lat || 0,
-          lng: location.lng || 0,
-          address: location.address
+          lat: resolvedLocation.lat!,
+          lng: resolvedLocation.lng!,
+          address: resolvedLocation.address,
+          isApproximate: resolvedLocation.mode === 'manual',
         },
         media: files.map(f => f.name),
         voiceNote: voiceBlob ? "voice-report-audio" : undefined,
-        privacyPreference,
+        privacyPreference: "allow_publication",
         // Include AI verification metadata if available
         ...(aiConfidence !== null ? { aiConfidence } : {}),
         ...(aiSummary ? { aiSummary } : {}),
@@ -628,57 +714,9 @@ export function ReportForm() {
         </div>
       </fieldset>
 
-      {/* Privacy Preference */}
-      <fieldset>
-        <legend className="text-sm font-semibold text-foreground">Privacy Preference</legend>
-        <p className="mt-1 text-xs text-muted-foreground">
-          Choose whether responders can publish an anonymised version of this incident after it has been resolved to improve public awareness. Responders always have final approval.
-        </p>
-        <div className="mt-3 flex flex-col gap-2.5 sm:flex-row">
-          <label
-            className={cn(
-              "flex flex-1 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
-              privacyPreference === 'private'
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-border/60 bg-card/40 text-muted-foreground hover:bg-secondary/40'
-            )}
-          >
-            <input
-              type="radio"
-              name="privacy"
-              value="private"
-              checked={privacyPreference === 'private'}
-              onChange={() => setPrivacyPreference('private')}
-              className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
-            />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">Keep Private</span>
-              <span className="mt-1 text-xs opacity-80">Only responders will see this report.</span>
-            </div>
-          </label>
-          <label
-            className={cn(
-              "flex flex-1 cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors",
-              privacyPreference === 'allow_publication'
-                ? 'border-primary bg-primary/10 text-foreground'
-                : 'border-border/60 bg-card/40 text-muted-foreground hover:bg-secondary/40'
-            )}
-          >
-            <input
-              type="radio"
-              name="privacy"
-              value="allow_publication"
-              checked={privacyPreference === 'allow_publication'}
-              onChange={() => setPrivacyPreference('allow_publication')}
-              className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
-            />
-            <div className="flex flex-col">
-              <span className="text-sm font-medium">Allow Publication</span>
-              <span className="mt-1 text-xs opacity-80">May appear on public maps when resolved.</span>
-            </div>
-          </label>
-        </div>
-      </fieldset>
+      <div className="rounded-xl border border-border/60 bg-card/40 px-4 py-3 text-xs text-foreground">
+        Reports are routed to responders first. Responders decide the final public/private publication status.
+      </div>
 
       {/* Confirmation */}
       <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-border/60 bg-card/40 px-4 py-3">
@@ -688,7 +726,7 @@ export function ReportForm() {
           onChange={(e) => setConfirmed(e.target.checked)}
           className="mt-0.5 size-4 shrink-0 accent-[var(--primary)]"
         />
-        <span className="text-sm leading-relaxed text-muted-foreground">
+        <span className="text-sm leading-relaxed text-foreground">
           I confirm this report is accurate to the best of my knowledge. Submitting false
           emergency reports is an offence under Ghanaian law.
         </span>
@@ -697,7 +735,7 @@ export function ReportForm() {
       <Button
         type="submit"
         disabled={!canSubmit || submitting}
-        className="h-12 w-full rounded-full text-sm"
+        className="h-12 w-full rounded-full text-sm disabled:cursor-not-allowed disabled:opacity-55"
       >
         {submitting ? (
           <>

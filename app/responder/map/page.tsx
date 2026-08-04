@@ -1,6 +1,6 @@
 "use client"
 
-import { useQuery } from "convex/react"
+import { useMutation, useQuery } from "convex/react"
 import { api } from "@/convex/_generated/api"
 import { APIProvider, Map, AdvancedMarker, useMap } from "@vis.gl/react-google-maps"
 import { 
@@ -24,7 +24,11 @@ import {
   Clock,
   ShieldCheck,
   X,
-  CloudRain
+  CloudRain,
+  Maximize2,
+  Minimize2,
+  MapPinOff,
+  RotateCcw
 } from "lucide-react"
 import { useState, useEffect } from "react"
 import { cn } from "@/lib/utils"
@@ -232,9 +236,12 @@ function OperationsMapController({
 export default function ResponderMap() {
   const user = useQuery(api.users.current, {})
   const incidents = useQuery(api.responder.getLiveQueue, {})
+  const setIncidentMapVisibility = useMutation(api.responder.setIncidentMapVisibility)
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY
   const [mapMode, setMapMode] = useState<"operations" | "public">("operations")
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [isFullscreen, setIsFullscreen] = useState(false)
+  const [updatingMapVisibility, setUpdatingMapVisibility] = useState(false)
   
   // Tactical Overlays State
   const [overlays, setOverlays] = useState({
@@ -248,6 +255,19 @@ export default function ResponderMap() {
   const [isPlaying, setIsPlaying] = useState(false)
   const [playbackTime, setPlaybackTime] = useState(100)
   const [showArchived, setShowArchived] = useState(false)
+
+  const handleMapVisibilityChange = async (hiddenFromOperationsMap: boolean) => {
+    if (!selectedIncident || updatingMapVisibility) return
+    setUpdatingMapVisibility(true)
+    try {
+      await setIncidentMapVisibility({ id: selectedIncident._id, hiddenFromOperationsMap })
+    } catch (error) {
+      console.error(error)
+      alert("Failed to update map marker visibility.")
+    } finally {
+      setUpdatingMapVisibility(false)
+    }
+  }
 
   // Simulation of timeline progress
   useEffect(() => {
@@ -277,12 +297,22 @@ export default function ResponderMap() {
     if (i.status === "ARCHIVED" && !showArchived) return false;
     return true;
   });
+  const markerIncidents = mapMode === "operations"
+    ? displayedIncidents.filter((i) => !i.hiddenFromOperationsMap)
+    : displayedIncidents;
 
   const selectedIncident = incidents.find(i => i._id === selectedId);
   const isKeyConfigured = apiKey && apiKey !== "your_google_maps_api_key_here" && apiKey.trim() !== "";
 
   return (
-    <div className="flex flex-col h-[calc(100vh-7.5rem)] gap-3 overflow-hidden text-slate-200">
+    <div
+      className={cn(
+        "flex flex-col gap-3 overflow-hidden text-slate-200",
+        isFullscreen
+          ? "fixed inset-0 z-50 h-screen bg-[#070b14] p-3"
+          : "h-[calc(100vh-7.5rem)]"
+      )}
+    >
       
       {/* Top Map Action Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800 pb-2.5">
@@ -295,7 +325,15 @@ export default function ResponderMap() {
         </div>
 
         {/* Map Type Switcher */}
-        <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-850 self-start sm:self-auto">
+        <div className="flex flex-wrap items-center gap-2 self-start sm:self-auto">
+          <button
+            onClick={() => setIsFullscreen((prev) => !prev)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:border-primary/50"
+          >
+            {isFullscreen ? <Minimize2 className="size-3.5" /> : <Maximize2 className="size-3.5" />}
+            {isFullscreen ? "Exit Fullscreen" : "Fullscreen"}
+          </button>
+          <div className="flex rounded-lg bg-slate-950 p-1 border border-slate-850">
           <button
             onClick={() => {
               setMapMode("operations");
@@ -326,6 +364,7 @@ export default function ResponderMap() {
             <Eye className="size-3.5" />
             Public Map Preview
           </button>
+          </div>
         </div>
       </div>
 
@@ -333,8 +372,8 @@ export default function ResponderMap() {
       <div className="flex flex-1 gap-3 overflow-hidden">
         
         {/* Left Side Controller Sidebar (Operations Mode Only) */}
-        {mapMode === "operations" && (
-          <div className="w-80 shrink-0 flex flex-col rounded-lg border border-slate-800 bg-[#0b0f19] p-4 shadow-md space-y-4">
+        {mapMode === "operations" && !isFullscreen && (
+          <div className="hidden w-80 shrink-0 flex-col rounded-lg border border-slate-800 bg-[#0b0f19] p-4 shadow-md space-y-4 xl:flex">
             
             {/* Playback Simulation */}
             <div className="bg-slate-950 border border-slate-850 rounded-lg p-3 space-y-2">
@@ -460,6 +499,11 @@ export default function ResponderMap() {
                           <span className="text-[9px] bg-red-950/20 border border-red-900/30 rounded px-1 text-red-400 font-semibold uppercase">
                             {inc.severity}
                           </span>
+                          {inc.hiddenFromOperationsMap && (
+                            <span className="text-[9px] bg-blue-950/20 border border-blue-900/30 rounded px-1 text-blue-300 font-semibold uppercase">
+                              Cleared
+                            </span>
+                          )}
                         </div>
                       </div>
                     </button>
@@ -498,7 +542,7 @@ export default function ResponderMap() {
                 )}
 
                 {/* Map Markers */}
-                {displayedIncidents.map((incident) => {
+                {markerIncidents.map((incident) => {
                   const meta = CATEGORY_MAP_META[incident.incidentType] || CATEGORY_MAP_META["Other"];
                   const Icon = meta.icon;
                   const isActive = incident._id === selectedId;
@@ -591,7 +635,14 @@ export default function ResponderMap() {
 
         {/* Right Detail Panel Drawer (When selected in operations map) */}
         {mapMode === "operations" && selectedIncident && (
-          <div className="w-80 shrink-0 flex flex-col rounded-lg border border-slate-800 bg-[#0b0f19] p-4 shadow-md space-y-4 overflow-y-auto">
+          <div
+            className={cn(
+              "flex flex-col rounded-lg border border-slate-800 bg-[#0b0f19] p-4 shadow-md space-y-4 overflow-y-auto",
+              isFullscreen
+                ? "absolute bottom-4 right-4 z-20 max-h-[60vh] w-[min(24rem,calc(100vw-2rem))]"
+                : "absolute bottom-4 right-4 z-20 max-h-[55vh] w-[min(22rem,calc(100vw-2rem))] lg:static lg:max-h-none lg:w-80 lg:shrink-0"
+            )}
+          >
             <div className="flex items-start justify-between">
               <div>
                 <span className="text-[9px] font-mono text-slate-500 uppercase">CASE: {selectedIncident._id.substring(0,8)}</span>
@@ -627,6 +678,30 @@ export default function ResponderMap() {
               </div>
             </div>
 
+            <div className="grid grid-cols-1 gap-2">
+              {selectedIncident.hiddenFromOperationsMap ? (
+                <button
+                  type="button"
+                  onClick={() => handleMapVisibilityChange(false)}
+                  disabled={updatingMapVisibility}
+                  className="inline-flex items-center justify-center gap-1.5 rounded border border-emerald-700/40 bg-emerald-950/30 px-3 py-2 text-xs font-semibold text-emerald-300 hover:bg-emerald-950/50 disabled:opacity-60"
+                >
+                  <RotateCcw className="size-3.5" />
+                  Restore Marker on Map
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => handleMapVisibilityChange(true)}
+                  disabled={updatingMapVisibility}
+                  className="inline-flex items-center justify-center gap-1.5 rounded border border-blue-700/40 bg-blue-950/30 px-3 py-2 text-xs font-semibold text-blue-300 hover:bg-blue-950/50 disabled:opacity-60"
+                >
+                  <MapPinOff className="size-3.5" />
+                  Clear Marker from Operations Map
+                </button>
+              )}
+            </div>
+
             {selectedIncident.aiConfidence && (
               <div className="bg-amber-500/5 border border-amber-500/10 rounded p-3 text-xs">
                 <div className="flex items-center gap-1.5 text-amber-500 font-bold">
@@ -655,5 +730,3 @@ export default function ResponderMap() {
     </div>
   )
 }
-
-

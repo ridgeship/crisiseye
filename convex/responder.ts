@@ -98,9 +98,6 @@ export const updateIncidentStatus = mutation({
     }
     
     if (args.status === "PUBLISHED") {
-      if (incident.privacyPreference !== "allow_publication") {
-        throw new Error("Cannot publish: Citizen requested privacy.");
-      }
       updates.published = true;
       updates.publishedAt = now;
       updates.visibility = "PUBLIC";
@@ -166,6 +163,37 @@ export const addIncidentNote = mutation({
   },
 });
 
+export const setIncidentMapVisibility = mutation({
+  args: {
+    id: v.id("incidents"),
+    hiddenFromOperationsMap: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const user = await requireResponder(ctx);
+    const incident = await ctx.db.get(args.id);
+    if (!incident) throw new Error("Incident not found");
+
+    const now = Date.now();
+    const statusHistory = [
+      ...(incident.statusHistory || []),
+      {
+        status: incident.status,
+        timestamp: now,
+        note: args.hiddenFromOperationsMap
+          ? `Location marker cleared from operations map by ${user.role}`
+          : `Location marker restored on operations map by ${user.role}`,
+        userId: user._id,
+      },
+    ];
+
+    await ctx.db.patch(args.id, {
+      hiddenFromOperationsMap: args.hiddenFromOperationsMap,
+      statusHistory,
+      updatedAt: now,
+    });
+  },
+});
+
 export const publishIncident = mutation({
   args: {
     id: v.id("incidents"),
@@ -179,10 +207,6 @@ export const publishIncident = mutation({
     const user = await requireResponder(ctx);
     const incident = await ctx.db.get(args.id);
     if (!incident) throw new Error("Incident not found");
-
-    if (incident.privacyPreference !== "allow_publication" && args.visibility === "PUBLIC") {
-      throw new Error("Cannot publish publicly: Citizen requested privacy.");
-    }
 
     const now = Date.now();
     const newTimelineEvent = {
@@ -221,5 +245,3 @@ export const publishIncident = mutation({
     }
   },
 });
-
-

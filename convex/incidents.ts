@@ -79,7 +79,8 @@ export const reportIncident = mutation({
     const newIncidentId = await ctx.db.insert("incidents", {
       ...args,
       reporterId: userId ?? undefined,
-      visibility: "PRIVATE", // Starts as private
+      visibility: "RESTRICTED", // Responder can decide final publication visibility later
+      privacyPreference: "allow_publication",
       status: "RECEIVED",
       statusHistory: [{
         status: "RECEIVED",

@@ -6,6 +6,13 @@ const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
 
 export async function POST(request: Request) {
   try {
+    if (!process.env.GEMINI_API_KEY) {
+      return NextResponse.json(
+        { error: "GEMINI_API_KEY is not configured on the server." },
+        { status: 503 }
+      );
+    }
+
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
     const category = formData.get("category") as string | null;
@@ -95,7 +102,8 @@ Analyze the provided image and classify it according to these rules:
       throw new Error("No text returned from Gemini API");
     }
 
-    const verificationResult = JSON.parse(responseText);
+    const sanitized = responseText.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+    const verificationResult = JSON.parse(sanitized);
 
     return NextResponse.json(verificationResult, { status: 200 });
   } catch (error: any) {

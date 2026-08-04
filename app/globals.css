@@ -141,6 +141,32 @@
   .text-glow {
     text-shadow: 0 0 24px oklch(0.62 0.17 256 / 0.35);
   }
+
+  /* Project-specific slate shades used across responder UI */
+  .text-slate-250 {
+    color: #e5e7eb;
+  }
+  .text-slate-350 {
+    color: #d1d5db;
+  }
+  .text-slate-450 {
+    color: #9ca3af;
+  }
+  .text-slate-455 {
+    color: #9ca3af;
+  }
+  .border-slate-850 {
+    border-color: #172033;
+  }
+  .bg-slate-850 {
+    background-color: #172033;
+  }
+  .hover\:bg-slate-850:hover {
+    background-color: #172033;
+  }
+  .hover\:text-slate-450:hover {
+    color: #9ca3af;
+  }
 }
 
 /* Leaflet dark theme adjustments */

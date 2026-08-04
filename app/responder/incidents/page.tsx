@@ -625,14 +625,12 @@ export default function EmergencyOperationsCentre() {
                   >
                     Resolve
                   </button>
-                  {selectedIncident.privacyPreference === "allow_publication" && (
-                    <button
-                      onClick={() => preparePublication(selectedIncident)}
-                      className="rounded bg-purple-950/40 text-purple-400 border border-purple-900/60 py-1.5 text-xs font-semibold hover:bg-purple-950/80 col-span-2"
-                    >
-                      {selectedIncident.status === "PUBLISHED" ? "Edit Public Alert" : "Publish Alert"}
-                    </button>
-                  )}
+                  <button
+                    onClick={() => preparePublication(selectedIncident)}
+                    className="rounded bg-purple-950/40 text-purple-400 border border-purple-900/60 py-1.5 text-xs font-semibold hover:bg-purple-950/80 col-span-2"
+                  >
+                    {selectedIncident.status === "PUBLISHED" ? "Edit Public Alert" : "Publish Alert"}
+                  </button>
                   <button
                     onClick={() => triggerStatusChange("ARCHIVED")}
                     disabled={selectedIncident.status === "ARCHIVED"}
@@ -1106,4 +1104,3 @@ export default function EmergencyOperationsCentre() {
     </div>
   );
 }
-

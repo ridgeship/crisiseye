@@ -57,6 +57,7 @@ export default defineSchema({
     
     assignedAgency: v.optional(v.string()),
     assignedResponder: v.optional(v.id("users")),
+    hiddenFromOperationsMap: v.optional(v.boolean()),
     
     aiConfidence: v.optional(v.number()),
     verificationResult: v.optional(v.string()),
